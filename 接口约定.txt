@@ -1,0 +1,115 @@
+# ISO11820 团队接口约定 v1.0
+# 创建日期：2026-06-14
+# DAY 1 晚上碰头确认后锁定，后续修改需全员同意
+
+## ============================================
+## 一、命名空间约定
+## ============================================
+# ISO11820.Core        — A 负责（核心逻辑）
+# ISO11820.Data        — B 负责（数据库）
+# ISO11820.Forms       — C 负责（界面）
+# ISO11820.Services    — D 负责（导出服务）
+# ISO11820.Simulation  — A 负责（仿真引擎）
+
+## ============================================
+## 二、全局单例（A 提供）
+## ============================================
+# AppGlobal.Instance.Configuration       — IConfiguration
+# AppGlobal.Instance.DbPath              — string  数据库路径
+# AppGlobal.Instance.BaseDirectory       — string  文件存储根目录
+# AppGlobal.Instance.ReportsDirectory    — string  报告输出目录
+# AppGlobal.Instance.EnableSimulation    — bool    是否仿真模式
+# AppGlobal.Instance.TargetFurnaceTemp   — double  目标炉温(750°C)
+# AppGlobal.Instance.HeatingRatePerSecond— double  升温速率(°C/s)
+# AppGlobal.Instance.TempFluctuation     — double  温度波动(°C)
+# AppGlobal.Instance.StableThreshold     — double  稳定阈值(°C)
+
+## ============================================
+## 三、数据库接口（B 提供）
+## ============================================
+# DbHelper 是一个类，构造函数接收数据库路径
+# public DbHelper(string dbPath)
+#
+# 登录验证：
+#   bool Login(string username, string pwd, out string userid, out string usertype)
+#
+# 新建试验：
+#   void InsertTest(TestMaster test)
+#
+# 更新试验结果：
+#   void UpdateTestResult(string productId, string testId, TestResult result)
+#
+# 查询试验列表：
+#   List<TestMaster> QueryTests(DateTime from, DateTime to, string productId)
+#
+# 试验主表实体（Everyone 共用）：
+#   class TestMaster {
+#       string ProductId, string TestId, DateTime TestDate,
+#       string Operator, double PreWeight, double PostWeight,
+#       double LostWeightPer, double DeltaTf, int TotalTestTime,
+#       string Flag  // "10000000" = 已完成
+#   }
+
+## ============================================
+## 四、UI 事件约定（C 提供）
+## ============================================
+# 按钮点击 → 调用 TestController 方法（A 提供）
+# TestController 定义在 Core 命名空间
+#
+# public enum TestState { Idle, Preparing, Ready, Recording, Complete }
+#
+# TestController 公开方法（A 提供）：
+#   void StartHeating()        — 开始升温
+#   void StopHeating()         — 停止升温
+#   void StartRecording()      — 开始记录
+#   void StopRecording()       — 停止记录
+#   TestState CurrentState     — 当前状态
+
+## ============================================
+## 五、数据广播事件（A → C）
+## ============================================
+# A 的 DaqWorker 每 800ms 通过事件向 C 推送温度数据：
+#
+# event EventHandler<DataBroadcastEventArgs> DataBroadcast;
+#
+# class DataBroadcastEventArgs {
+#     double Tf1, Tf2, Ts, Tc, Tcal;  // 5通道温度
+#     int ElapsedSeconds;              // 已记录秒数
+#     TestState State;                 // 当前状态
+#     List<MasterMessage> Messages;    // 系统消息
+# }
+#
+# class MasterMessage {
+#     string Time;     // "HH:mm:ss"
+#     string Content;  // 消息文本
+# }
+
+## ============================================
+## 六、导出服务（B/D 提供）
+## ============================================
+# CSV（B）：
+#   void ExportCsv(string productId, string testId, string outputPath)
+#
+# Excel（B）：
+#   void ExportExcel(string productId, string testId, string outputPath)
+#
+# PDF（D）：
+#   void ExportPdf(string productId, string testId, string outputPath)
+
+## ============================================
+## 七、文件路径规范
+## ============================================
+# 温度CSV：{BaseDirectory}\TestData\{productId}\{testId}\sensor_data.csv
+# 报告Excel：{ReportsDirectory}\{testId}_报告.xlsx
+# 报告PDF：{ReportsDirectory}\{testId}_报告.pdf
+# 数据库：{BaseDirectory}\Data\ISO11820.db
+# BaseDirectory 和 ReportsDirectory 从 appsettings.json 读取
+
+## ============================================
+## 八、Git 分支命名
+## ============================================
+# main          — 受保护，仅通过 PR 合入
+# dev-a         — A 的开发分支
+# dev-b         — B 的开发分支
+# dev-c         — C 的开发分支
+# dev-d         — D 的开发分支

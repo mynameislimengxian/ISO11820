@@ -1,0 +1,18 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.db
+
+## IDE
+.vs/
+.idea/
+*.sln.DotSettings.user
+
+## macOS
+.DS_Store
+
+## Build
+/ISO11820/Data/ISO11820.db
