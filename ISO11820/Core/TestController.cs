@@ -62,6 +62,12 @@ public class TestController
     private double _driftTf1;                           // TF1 温漂（°C/10min）
     private double _driftTf2;                           // TF2 温漂（°C/10min）
 
+    // ========== 终止条件 ==========
+
+    private TestMode _testMode = TestMode.Standard60Min;  // 试验模式
+    private int _targetDurationSeconds = 3600;             // 目标时长（秒），仅 FixedDuration 模式使用
+    private int _lastCheckMinute;                          // 上次检查的"分钟"刻度（用于标准模式每5分钟检查）
+
     // ========== 事件 ==========
 
     /// <summary>
@@ -174,6 +180,27 @@ public class TestController
         }
     }
 
+    /// <summary>
+    /// 设置试验模式。
+    /// Standard60Min：标准 60 分钟模式，每 5 分钟检查提前终止条件，60 分钟无条件终止。
+    /// FixedDuration：固定时长模式，到达 targetSeconds 后自动终止。
+    /// </summary>
+    public void SetTestMode(TestMode mode, int targetSeconds = 3600)
+    {
+        lock (_lock)
+        {
+            _testMode = mode;
+            _targetDurationSeconds = targetSeconds > 0 ? targetSeconds : 3600;
+            _lastCheckMinute = 0;
+        }
+    }
+
+    /// <summary>获取当前试验模式</summary>
+    public TestMode CurrentTestMode => _testMode;
+
+    /// <summary>获取目标时长（秒）</summary>
+    public int TargetDurationSeconds => _targetDurationSeconds;
+
     // ========== 核心 tick：每 800ms 执行 ==========
 
     private void OnTimerTick(object? sender, ElapsedEventArgs e)
@@ -194,14 +221,20 @@ public class TestController
             // 4. 检查状态转移
             CheckStateTransition();
 
-            // 5. 计时更新
+            // 5. 检查终止条件（仅 Recording 状态）
+            if (State == TestState.Recording)
+            {
+                CheckTerminationConditions();
+            }
+
+            // 6. 计时更新
             if (State == TestState.Recording)
             {
                 _recordingTickCount++;
                 ElapsedSeconds++;
             }
 
-            // 6. 广播数据到 UI
+            // 7. 广播数据到 UI
             var args = new DataBroadcastEventArgs
             {
                 Tf1 = Math.Round(Tf1, 1),
@@ -355,6 +388,68 @@ public class TestController
 
         _driftTf1 = slope1 * ticksPer10Min;
         _driftTf2 = slope2 * ticksPer10Min;
+    }
+
+    // ========== 终止条件判定 ==========
+
+    /// <summary>
+    /// 检查试验终止条件。根据不同模式执行不同策略：
+    ///
+    /// 标准 60 分钟模式：
+    ///   - 每 5 分钟检查一次（t=1800/2100/2400/2700/3000/3300s）
+    ///   - 条件：TF1 和 TF2 的 10 分钟温漂均不超过 MaxTemperatureDriftPerTenMinutes
+    ///   - 满足条件则提前终止
+    ///   - t=3600s 无条件终止
+    ///
+    /// 固定时长模式：
+    ///   - 忽略提前终止检查，到达 _targetDurationSeconds 后终止
+    /// </summary>
+    private void CheckTerminationConditions()
+    {
+        int currentMinute = ElapsedSeconds / 60; // 当前分钟数
+        int currentSecond = ElapsedSeconds;
+
+        switch (_testMode)
+        {
+            case TestMode.Standard60Min:
+                // 无条件终止：到达 3600 秒
+                if (currentSecond >= 3600)
+                {
+                    State = TestState.Complete;
+                    AddMessage("记录时间到达 3600 秒，试验自动结束");
+                    return;
+                }
+
+                // 每 5 分钟检查一次提前终止条件（t=30,35,40,45,50,55 分钟）
+                if (currentMinute >= 30 && currentMinute % 5 == 0 && currentMinute != _lastCheckMinute)
+                {
+                    _lastCheckMinute = currentMinute;
+
+                    var driftThreshold = AppGlobal.Instance.MaxTemperatureDriftPerTenMinutes;
+                    bool tf1Stable = Math.Abs(_driftTf1) <= driftThreshold;
+                    bool tf2Stable = Math.Abs(_driftTf2) <= driftThreshold;
+                    bool hasEnoughData = _tf1History.Count >= 100; // 至少 100 个数据点（约 80 秒）
+
+                    if (hasEnoughData && tf1Stable && tf2Stable)
+                    {
+                        State = TestState.Complete;
+                        AddMessage(
+                            $"满足终止条件，试验结束（温漂 TF1={_driftTf1:F2}°C/10min, " +
+                            $"TF2={_driftTf2:F2}°C/10min，均 ≤ {driftThreshold}°C/10min）",
+                            "warning");
+                    }
+                }
+                break;
+
+            case TestMode.FixedDuration:
+                // 固定时长模式：到达目标秒数
+                if (currentSecond >= _targetDurationSeconds)
+                {
+                    State = TestState.Complete;
+                    AddMessage($"记录时间到达 {_targetDurationSeconds} 秒，试验自动结束");
+                }
+                break;
+        }
     }
 
     // ========== 工具方法 ==========
