@@ -405,6 +405,9 @@ public partial class MainForm : Form
         using var form = new NewTestForm(Controller);
         if (form.ShowDialog() == DialogResult.OK)
         {
+            // 更新产品编号显示
+            if (!string.IsNullOrEmpty(Controller.CurrentProductId))
+                lblProductIdValue.Text = Controller.CurrentProductId;
             UpdateButtonStates(Controller.State);
         }
     }

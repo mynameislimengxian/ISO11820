@@ -483,6 +483,21 @@ public class NewTestForm : Form
         try
         {
             var dbHelper = new DbHelper(AppGlobal.Instance.DbPath);
+
+            // 先检查样品是否存在，不存在则创建（外键约束要求）
+            var existingProduct = dbHelper.GetProduct(txtProductId.Text);
+            if (existingProduct == null)
+            {
+                dbHelper.InsertProduct(new ProductMaster
+                {
+                    ProductId = txtProductId.Text,
+                    ProductName = txtProductName.Text,
+                    Specific = txtSpecification.Text,
+                    Diameter = double.TryParse(txtDiameter.Text, out var dia) ? dia : 50,
+                    Height = double.TryParse(txtHeight.Text, out var h) ? h : 60
+                });
+            }
+
             var test = new TestMaster
             {
                 ProductId = txtProductId.Text,
