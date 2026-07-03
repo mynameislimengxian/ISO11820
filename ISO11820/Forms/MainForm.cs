@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using ISO11820.Core;
 using ISO11820.Data;
+using ISO11820.Services;
 using OxyPlot;
 using OxyPlot.Axes;
 using OxyPlot.Series;
@@ -57,13 +58,16 @@ public partial class MainForm : Form
     private Button btnStopRecord = null!;
     private Button btnSettings = null!;
 
-    // ========== TabControl ==========
+// ========== TabControl ==========
     private TabControl _tabControl = null!;
     private TabPage _experimentTab = null!;
     private TabPage _recordQueryTab = null!;
     private TabPage _calibrationTab = null!;
     private RecordQueryTab _recordQueryControl = null!;
     private CalibrationTab _calibrationControl = null!;
+
+    // ========== 温度记录缓冲区（用于 CSV 导出） ==========
+    private readonly List<TemperatureRecord> _temperatureRecords = new();
 
     // ==================== 构造函数 ====================
 
@@ -86,6 +90,7 @@ public partial class MainForm : Form
         BuildMessageLog();
 
         Controller.DataBroadcast += OnDataBroadcast;
+        _chartStartTime = DateTime.Now;
         UpdateButtonStates(Controller.State);
     }
 
@@ -373,6 +378,7 @@ public partial class MainForm : Form
         {
             case TestState.Idle:
                 btnNewTest.Enabled = true;
+                btnStartHeat.Enabled = true;
                 btnSettings.Enabled = true;
                 break;
             case TestState.Preparing:
@@ -409,6 +415,8 @@ public partial class MainForm : Form
         {
             MessageBox.Show("无法开始升温，请检查当前状态", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
+        _chartStartTime = DateTime.Now;
+        ResetChart();
         UpdateButtonStates(Controller.State);
     }
 
@@ -442,15 +450,30 @@ public partial class MainForm : Form
 
         if (Controller.State == TestState.Complete)
         {
-            double preWeight = 100.0;
-            double initialTemp = 25.0;
-            string productId = Controller.CurrentProductId ?? "UNKNOWN";
-            string testId = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+            string productId = Controller.CurrentProductId;
+            string testId = Controller.CurrentTestId;
+            double preWeight = Controller.CurrentPreWeight;
+            double initialTemp = Controller.Ts; // 样品初始温度（记录开始时的温度）
+
+            // 如果 preWeight 为 0（兼容旧数据），尝试从数据库读取
+            if (preWeight <= 0 && !string.IsNullOrEmpty(productId) && !string.IsNullOrEmpty(testId))
+            {
+                var dbHelper = new DbHelper(AppGlobal.Instance.DbPath);
+                var existingTest = dbHelper.GetTest(productId, testId);
+                if (existingTest != null)
+                {
+                    preWeight = existingTest.PreWeight;
+                    Controller.CurrentPreWeight = preWeight;
+                }
+            }
 
             using var form = new PhenomenonForm(Controller, productId, testId, preWeight, initialTemp);
             if (form.ShowDialog() == DialogResult.OK)
             {
                 UpdateButtonStates(Controller.State);
+
+                // 触发导出服务
+                ExportTestResults(productId, testId);
             }
         }
     }
@@ -516,8 +539,68 @@ public partial class MainForm : Form
             AppendChartPoint(realElapsed, e.Tf1, e.Tf2, e.Ts, e.Tc);
         }
 
+        // 记录阶段：收集温度数据用于 CSV 导出
+        if (e.State == TestState.Recording)
+        {
+            _temperatureRecords.Add(new TemperatureRecord
+            {
+                Time = e.ElapsedSeconds,
+                Tf1 = e.Tf1,
+                Tf2 = e.Tf2,
+                Ts = e.Ts,
+                Tc = e.Tc,
+                Tcal = e.Tcal
+            });
+        }
+
         foreach (var msg in e.Messages)
             AppendLogMessage(msg);
+    }
+
+    // ==================== 导出服务 ====================
+
+    private void ExportTestResults(string productId, string testId)
+    {
+        try
+        {
+            var dbHelper = _dbHelper ?? new DbHelper(AppGlobal.Instance.DbPath);
+
+            // 1. CSV 导出 — 温度时间序列
+            if (_temperatureRecords.Count > 0)
+            {
+                string csvPath = FileStorageManager.GetCsvPath(productId, testId);
+                CsvExportService.Export(csvPath, _temperatureRecords);
+                AppendLogMessage(new MasterMessage
+                {
+                    Time = DateTime.Now.ToString("HH:mm:ss"),
+                    Content = $"CSV 数据已导出：{csvPath}",
+                    Type = "normal"
+                });
+            }
+            _temperatureRecords.Clear();
+
+            // 2. PDF 导出 — 试验报告
+            var pdfService = new PdfExportService(dbHelper);
+            string pdfPath = pdfService.ExportPdf(productId, testId);
+            AppendLogMessage(new MasterMessage
+            {
+                Time = DateTime.Now.ToString("HH:mm:ss"),
+                Content = $"PDF 报告已导出：{pdfPath}",
+                Type = "normal"
+            });
+
+            // 3. Excel 导出 — 可选（用户可在记录查询 Tab 中手动导出）
+            // 不在此处自动导出，避免不必要的文件生成
+        }
+        catch (Exception ex)
+        {
+            AppendLogMessage(new MasterMessage
+            {
+                Time = DateTime.Now.ToString("HH:mm:ss"),
+                Content = $"导出失败：{ex.Message}",
+                Type = "warning"
+            });
+        }
     }
 
     // ==================== 窗体关闭 ====================

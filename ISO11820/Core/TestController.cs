@@ -41,6 +41,12 @@ public class TestController
     /// <summary>当前样品编号</summary>
     public string CurrentProductId { get; set; } = string.Empty;
 
+    /// <summary>当前试验编号</summary>
+    public string CurrentTestId { get; set; } = string.Empty;
+
+    /// <summary>当前试验前质量（g）</summary>
+    public double CurrentPreWeight { get; set; }
+
     /// <summary>当前操作员</summary>
     public string CurrentOperator { get; set; } = string.Empty;
 

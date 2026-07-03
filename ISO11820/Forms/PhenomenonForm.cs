@@ -273,9 +273,8 @@ public class PhenomenonForm : Form
             lblLostWeight.Text = $"{lostWeight:F2}";
             lblLostWeightPer.Text = $"{lostWeightPer:F2}";
 
-            // 使用传入的初始温度，实际温升需要从控制器获取最终温度
-            // 这里先显示提示，后续由 A 角色对接
-            lblTempRise.Text = "0.00（待对接）";
+            double tempRise = _controller.Ts - _initialTemp;
+            lblTempRise.Text = $"{tempRise:F2}";
         }
         else
         {

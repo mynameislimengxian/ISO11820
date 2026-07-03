@@ -512,6 +512,8 @@ public class NewTestForm : Form
             _controller.SetTestMode(TestMode.Standard60Min, 3600);
             dbHelper.InsertTest(test);
             _controller.CurrentProductId = txtProductId.Text;
+            _controller.CurrentTestId = testId;
+            _controller.CurrentPreWeight = preWeight;
 
             MessageBox.Show($"试验创建成功！\n样品编号：{txtProductId.Text}",
                 "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
