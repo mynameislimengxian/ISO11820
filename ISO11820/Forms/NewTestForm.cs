@@ -42,7 +42,7 @@ public class NewTestForm : Form
     private void InitializeForm()
     {
         Text = "新建试验 — ISO 11820";
-        Size = new Size(620, 720);
+        Size = new Size(640, 760);
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;

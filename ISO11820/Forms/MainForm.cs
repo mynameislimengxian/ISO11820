@@ -228,13 +228,13 @@ public partial class MainForm : Form
         plotModel.Axes.Add(xAxis);
         plotModel.Axes.Add(yAxis);
 
-        seriesTf1 = new LineSeries { Title = "TF1 炉温1", Color = OxyColors.Red, StrokeThickness = 1.5 };
+        seriesTf1 = new LineSeries { Title = "TF1 炉温1", Color = OxyColors.Red, StrokeThickness = 2.5 };
         seriesTf2 = new LineSeries { Title = "TF2 炉温2", Color = OxyColors.Orange, StrokeThickness = 1.5 };
         seriesTs = new LineSeries { Title = "TS 表面温度", Color = OxyColors.DeepSkyBlue, StrokeThickness = 1.5 };
-        seriesTc = new LineSeries { Title = "TC 中心温度", Color = OxyColors.LimeGreen, StrokeThickness = 1.5 };
+        seriesTc = new LineSeries { Title = "TC 中心温度", Color = OxyColors.LimeGreen, StrokeThickness = 2.0 };
 
-        plotModel.Series.Add(seriesTf1);
         plotModel.Series.Add(seriesTf2);
+        plotModel.Series.Add(seriesTf1);  // TF1 画在 TF2 上面，确保两条线都可见
         plotModel.Series.Add(seriesTs);
         plotModel.Series.Add(seriesTc);
 
