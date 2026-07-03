@@ -202,7 +202,7 @@ public partial class MainForm : Form
             Title = "温度实时曲线",
             TitleColor = OxyColors.White,
             PlotAreaBorderColor = OxyColors.Gray,
-            Background = OxyColors.FromRgb(20, 20, 20),
+            Background = OxyColor.FromRgb(20, 20, 20),
             TextColor = OxyColors.Gainsboro
         };
 
@@ -213,7 +213,7 @@ public partial class MainForm : Form
             TitleColor = OxyColors.Gainsboro,
             TextColor = OxyColors.Gainsboro,
             MajorGridlineStyle = LineStyle.Dot,
-            MajorGridlineColor = OxyColors.FromRgb(60, 60, 60),
+            MajorGridlineColor = OxyColor.FromRgb(60, 60, 60),
             Minimum = 0,
             Maximum = PlotWindowSeconds
         };
@@ -225,7 +225,7 @@ public partial class MainForm : Form
             TitleColor = OxyColors.Gainsboro,
             TextColor = OxyColors.Gainsboro,
             MajorGridlineStyle = LineStyle.Dot,
-            MajorGridlineColor = OxyColors.FromRgb(60, 60, 60),
+            MajorGridlineColor = OxyColor.FromRgb(60, 60, 60),
             Minimum = 0,
             Maximum = 800
         };
