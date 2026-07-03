@@ -8,7 +8,7 @@ namespace ISO11820.Forms;
 
 /// <summary>
 /// 主窗体 — 试验控制 + 实时数据显示 + 曲线图 + 记录查询。
-/// 角色 C 负责。当前阶段：温度面板（②）。
+/// 角色 C 负责。当前阶段：温度面板（②）+ 曲线图（③）+ 消息日志（④）。
 /// </summary>
 public partial class MainForm : Form
 {
@@ -42,14 +42,18 @@ public partial class MainForm : Form
     // 不能直接用 e.ElapsedSeconds，因为它只在 Recording 状态才计时。
     private double _chartTimeSeconds;
 
+    // ========== 系统消息日志 ==========
+    private RichTextBox rtbLog = null!;
+
     public MainForm()
     {
         Text = "ISO 11820 建筑材料不燃性试验系统";
-        Size = new Size(1280, 800);
+        Size = new Size(1280, 850);
         StartPosition = FormStartPosition.CenterScreen;
 
         BuildTemperaturePanel();
         BuildTemperatureChart();
+        BuildMessageLog();
 
         // 订阅数据广播事件（在后台线程触发，必须用 Invoke 切回 UI 线程）
         _controller.DataBroadcast += OnDataBroadcast;
@@ -192,6 +196,50 @@ public partial class MainForm : Form
     }
 
     /// <summary>
+    /// 构建系统消息日志：RichTextBox，每条消息 "HH:mm:ss 内容"，
+    /// 普通消息黑色，警告消息橙红色，追加后自动滚动到底部。
+    /// </summary>
+    private void BuildMessageLog()
+    {
+        var lblTitle = new Label
+        {
+            Text = "系统消息日志",
+            Font = new Font("微软雅黑", 10, FontStyle.Bold),
+            Location = new Point(20, 570),
+            Size = new Size(200, 25)
+        };
+
+        rtbLog = new RichTextBox
+        {
+            Location = new Point(20, 595),
+            Size = new Size(1230, 150),
+            ReadOnly = true,
+            BackColor = Color.White,
+            Font = new Font("Consolas", 10),
+            ScrollBars = RichTextBoxScrollBars.Vertical
+        };
+
+        Controls.Add(lblTitle);
+        Controls.Add(rtbLog);
+    }
+
+    /// <summary>
+    /// 向日志追加一条消息。type 为 "warning" 时显示橙红色，其余为普通黑色。
+    /// </summary>
+    private void AppendLogMessage(MasterMessage msg)
+    {
+        Color color = msg.Type == "warning" ? Color.OrangeRed : Color.Black;
+
+        rtbLog.SelectionStart = rtbLog.TextLength;
+        rtbLog.SelectionLength = 0;
+        rtbLog.SelectionColor = color;
+        rtbLog.AppendText($"{msg.Time} {msg.Content}{Environment.NewLine}");
+        rtbLog.SelectionColor = rtbLog.ForeColor;
+
+        rtbLog.ScrollToCaret();
+    }
+
+    /// <summary>
     /// 构建 OxyPlot 实时温度曲线：4 条折线（TF1红/TF2橙/TS蓝/TC绿），
     /// X 轴时间（秒）滚动 10 分钟窗口，Y 轴固定 0~800°C。
     /// </summary>
@@ -202,7 +250,7 @@ public partial class MainForm : Form
             Title = "温度实时曲线",
             TitleColor = OxyColors.White,
             PlotAreaBorderColor = OxyColors.Gray,
-            Background = OxyColors.FromRgb(20, 20, 20),
+            Background = OxyColor.FromRgb(20, 20, 20),
             TextColor = OxyColors.Gainsboro
         };
 
@@ -213,7 +261,7 @@ public partial class MainForm : Form
             TitleColor = OxyColors.Gainsboro,
             TextColor = OxyColors.Gainsboro,
             MajorGridlineStyle = LineStyle.Dot,
-            MajorGridlineColor = OxyColors.FromRgb(60, 60, 60),
+            MajorGridlineColor = OxyColor.FromRgb(60, 60, 60),
             Minimum = 0,
             Maximum = PlotWindowSeconds
         };
@@ -225,7 +273,7 @@ public partial class MainForm : Form
             TitleColor = OxyColors.Gainsboro,
             TextColor = OxyColors.Gainsboro,
             MajorGridlineStyle = LineStyle.Dot,
-            MajorGridlineColor = OxyColors.FromRgb(60, 60, 60),
+            MajorGridlineColor = OxyColor.FromRgb(60, 60, 60),
             Minimum = 0,
             Maximum = 800
         };
@@ -350,7 +398,11 @@ public partial class MainForm : Form
             AppendChartPoint(_chartTimeSeconds, e.Tf1, e.Tf2, e.Ts, e.Tc);
         }
 
-        // TODO: e.Messages 将在「④ 系统消息日志」阶段接入 RichTextBox
+        // 系统消息日志：把本次广播携带的所有消息追加显示
+        foreach (var msg in e.Messages)
+        {
+            AppendLogMessage(msg);
+        }
     }
 
     /// <summary>新一轮升温开始时（Idle）清空曲线数据，重新计时</summary>
