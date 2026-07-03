@@ -31,7 +31,7 @@ static class Program
         var db = new DbHelper(dbPath);
 
         // 5. 显示登录窗体
-        using var loginForm = new LoginForm();
+        using var loginForm = new LoginForm(db);
         if (loginForm.ShowDialog() != DialogResult.OK)
         {
             // 用户取消登录
@@ -41,8 +41,8 @@ static class Program
         // 6. 登录成功，启动主窗体
         Application.Run(new MainForm(
             db,
-            loginForm.LoggedInUserId,
-            loginForm.LoggedInUserType
+            loginForm.LoggedInUser,
+            loginForm.LoggedInRole
         ));
     }
 }
