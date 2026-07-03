@@ -49,4 +49,10 @@ public class AppGlobal
 
     public double StableThreshold => double.Parse(
         Configuration["Simulation:StableThreshold"] ?? "3.0");
+
+    public double MaxTemperatureDriftPerTenMinutes => double.Parse(
+        Configuration["Simulation:MaxTemperatureDriftPerTenMinutes"] ?? "2.0");
+
+    public int DriftWindowSeconds => int.Parse(
+        Configuration["Simulation:DriftWindowSeconds"] ?? "600");
 }

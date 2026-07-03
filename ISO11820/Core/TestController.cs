@@ -1,4 +1,5 @@
 using System.Timers;
+using MathNet.Numerics;
 using Timer = System.Timers.Timer;
 
 namespace ISO11820.Core;
@@ -53,6 +54,14 @@ public class TestController
     private double _heatingRate;            // °C/s
     private double _fluctuation;            // 噪声幅度
 
+    // ========== 温漂计算 ==========
+
+    private readonly List<double> _tf1History = new();  // TF1 历史数据（每 tick 一个点）
+    private readonly List<double> _tf2History = new();  // TF2 历史数据
+    private const int MaxHistoryPoints = 600;           // 最多保留 600 个数据点（约 10 分钟）
+    private double _driftTf1;                           // TF1 温漂（°C/10min）
+    private double _driftTf2;                           // TF2 温漂（°C/10min）
+
     // ========== 事件 ==========
 
     /// <summary>
@@ -91,6 +100,10 @@ public class TestController
             if (State != TestState.Idle) return false;
             State = TestState.Preparing;
             _stableTickCount = 0;
+            _tf1History.Clear();
+            _tf2History.Clear();
+            _driftTf1 = 0;
+            _driftTf2 = 0;
 
             // 仿真模式下从室温起步
             if (AppGlobal.Instance.EnableSimulation)
@@ -172,17 +185,23 @@ public class TestController
             // 1. 更新温度（仿真）
             UpdateTemperatures();
 
-            // 2. 检查状态转移
+            // 2. 记录温度历史（用于温漂计算）
+            RecordTemperatureHistory();
+
+            // 3. 计算温漂
+            CalculateDrift();
+
+            // 4. 检查状态转移
             CheckStateTransition();
 
-            // 3. 计时更新
+            // 5. 计时更新
             if (State == TestState.Recording)
             {
                 _recordingTickCount++;
                 ElapsedSeconds++;
             }
 
-            // 4. 广播数据到 UI
+            // 6. 广播数据到 UI
             var args = new DataBroadcastEventArgs
             {
                 Tf1 = Math.Round(Tf1, 1),
@@ -192,6 +211,8 @@ public class TestController
                 Tcal = Math.Round(Tcal, 1),
                 ElapsedSeconds = ElapsedSeconds,
                 State = State,
+                DriftTf1 = Math.Round(_driftTf1, 3),
+                DriftTf2 = Math.Round(_driftTf2, 3),
                 Messages = new List<MasterMessage>(_pendingMessages)
             };
             _pendingMessages.Clear();
@@ -284,6 +305,56 @@ public class TestController
                 _stableTickCount = 0;
             }
         }
+    }
+
+    // ========== 温漂计算 ==========
+
+    /// <summary>记录温度历史数据（每 tick 一个点，最多保留 600 个点）</summary>
+    private void RecordTemperatureHistory()
+    {
+        _tf1History.Add(Tf1);
+        _tf2History.Add(Tf2);
+
+        // 保持历史数据不超过上限
+        while (_tf1History.Count > MaxHistoryPoints)
+            _tf1History.RemoveAt(0);
+        while (_tf2History.Count > MaxHistoryPoints)
+            _tf2History.RemoveAt(0);
+    }
+
+    /// <summary>
+    /// 使用 MathNet.Numerics 线性回归计算温漂（°C/10min）。
+    /// 对最近的历史数据点做最小二乘拟合，斜率 × 每10分钟tick数 = 温漂值。
+    /// 数据点不足 10 个时，温漂设为 0。
+    /// </summary>
+    private void CalculateDrift()
+    {
+        int count = _tf1History.Count;
+        if (count < 10)
+        {
+            _driftTf1 = 0;
+            _driftTf2 = 0;
+            return;
+        }
+
+        // 构建 x 数组（tick 序号，0 ~ count-1）
+        double[] xArr = new double[count];
+        for (int i = 0; i < count; i++)
+            xArr[i] = i;
+
+        double[] yArr1 = _tf1History.ToArray();
+        double[] yArr2 = _tf2History.ToArray();
+
+        // 线性回归：Fit.Line 返回 (intercept, slope)
+        var (_, slope1) = Fit.Line(xArr, yArr1);
+        var (_, slope2) = Fit.Line(xArr, yArr2);
+
+        // 斜率单位：°C/tick，转换为 °C/10min
+        // 10 分钟 = 600 秒，每 tick = 800ms = 0.8s，10 分钟 = 750 tick
+        const double ticksPer10Min = 600.0 / 0.8; // 750
+
+        _driftTf1 = slope1 * ticksPer10Min;
+        _driftTf2 = slope2 * ticksPer10Min;
     }
 
     // ========== 工具方法 ==========

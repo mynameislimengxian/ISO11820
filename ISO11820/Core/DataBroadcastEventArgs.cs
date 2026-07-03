@@ -26,6 +26,12 @@ public class DataBroadcastEventArgs : EventArgs
     /// <summary>当前试验状态</summary>
     public TestState State { get; set; }
 
+    /// <summary>炉温1 温漂（°C/10min），基于最近600个数据点的线性回归斜率</summary>
+    public double DriftTf1 { get; set; }
+
+    /// <summary>炉温2 温漂（°C/10min）</summary>
+    public double DriftTf2 { get; set; }
+
     /// <summary>本次广播携带的系统消息列表</summary>
     public List<MasterMessage> Messages { get; set; } = new();
 }
