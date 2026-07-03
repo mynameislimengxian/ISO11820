@@ -310,22 +310,11 @@ public class PdfExportService
     /// </summary>
     private static string GetChineseFont()
     {
-        // 尝试常见中文字体
-        var fontsToTry = new[] { "Microsoft YaHei", "微软雅黑", "SimSun", "宋体", "SimHei", "黑体" };
-        return fontsToTry.FirstOrDefault(f => FontExists(f)) ?? "Arial";
-    }
-
-    private static bool FontExists(string fontName)
-    {
-        try
+        foreach (var name in new[] { "Microsoft YaHei", "SimSun", "Arial" })
         {
-            var font = new MdFont(fontName, 10);
-            return font.Name.Contains(fontName, StringComparison.OrdinalIgnoreCase)
-                || fontName.Contains(font.Name, StringComparison.OrdinalIgnoreCase);
+            try { new MdFont(name, 10); return name; }
+            catch { /* 字体不可用，尝试下一个 */ }
         }
-        catch
-        {
-            return false;
-        }
+        return "Arial";
     }
 }

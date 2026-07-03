@@ -57,6 +57,14 @@ public partial class MainForm : Form
     private Button btnStopRecord = null!;
     private Button btnSettings = null!;
 
+    // ========== TabControl ==========
+    private TabControl _tabControl = null!;
+    private TabPage _experimentTab = null!;
+    private TabPage _recordQueryTab = null!;
+    private TabPage _calibrationTab = null!;
+    private RecordQueryTab _recordQueryControl = null!;
+    private CalibrationTab _calibrationControl = null!;
+
     // ==================== 构造函数 ====================
 
     public MainForm() : this("", "", (DbHelper?)null) { }
@@ -71,6 +79,7 @@ public partial class MainForm : Form
         Size = new Size(1280, 920);
         StartPosition = FormStartPosition.CenterScreen;
 
+        BuildTabControl();
         BuildTemperaturePanel();
         BuildTemperatureChart();
         BuildButtons();
@@ -83,6 +92,42 @@ public partial class MainForm : Form
     public MainForm(DbHelper dbHelper, string loggedInUser, string loggedInRole)
         : this(loggedInUser, loggedInRole, dbHelper)
     {
+    }
+
+    // ==================== 构建 TabControl ====================
+    private void BuildTabControl()
+    {
+        _tabControl = new TabControl
+        {
+            Dock = DockStyle.Fill,
+            Font = new Font("Microsoft YaHei", 10)
+        };
+
+        // 试验控制 Tab
+        _experimentTab = new TabPage("试验控制");
+        _tabControl.TabPages.Add(_experimentTab);
+
+        // 记录查询 Tab
+        if (_dbHelper != null)
+        {
+            _recordQueryTab = new TabPage("记录查询");
+            _recordQueryControl = new RecordQueryTab(_dbHelper);
+            _recordQueryControl.Dock = DockStyle.Fill;
+            _recordQueryTab.Controls.Add(_recordQueryControl);
+            _tabControl.TabPages.Add(_recordQueryTab);
+        }
+
+        // 设备校准 Tab
+        if (_dbHelper != null)
+        {
+            _calibrationTab = new TabPage("设备校准");
+            _calibrationControl = new CalibrationTab(_dbHelper, Controller);
+            _calibrationControl.Dock = DockStyle.Fill;
+            _calibrationTab.Controls.Add(_calibrationControl);
+            _tabControl.TabPages.Add(_calibrationTab);
+        }
+
+        Controls.Add(_tabControl);
     }
 
     // ==================== 构建温度面板 ====================
@@ -127,7 +172,7 @@ public partial class MainForm : Form
         panel.Controls.Add(lblStateValue);
         panel.Controls.Add(lblProductIdTitle);
         panel.Controls.Add(lblProductIdValue);
-        Controls.Add(panel);
+        _experimentTab.Controls.Add(panel);
     }
 
     private (Label label, Label value) CreateChannel(Panel panel, string title, int x, Color ledColor)
@@ -202,7 +247,7 @@ public partial class MainForm : Form
             Size = new Size(1230, 360),
             BackColor = Color.FromArgb(20, 20, 20)
         };
-        Controls.Add(plotView);
+        _experimentTab.Controls.Add(plotView);
     }
 
     private void AppendChartPoint(double elapsedSeconds, double tf1, double tf2, double ts, double tc)
@@ -270,12 +315,12 @@ public partial class MainForm : Form
         btnStopRecord.Click += BtnStopRecord_Click;
         btnSettings.Click += BtnSettings_Click;
 
-        Controls.Add(btnNewTest);
-        Controls.Add(btnStartHeat);
-        Controls.Add(btnStopHeat);
-        Controls.Add(btnStartRecord);
-        Controls.Add(btnStopRecord);
-        Controls.Add(btnSettings);
+        _experimentTab.Controls.Add(btnNewTest);
+        _experimentTab.Controls.Add(btnStartHeat);
+        _experimentTab.Controls.Add(btnStopHeat);
+        _experimentTab.Controls.Add(btnStartRecord);
+        _experimentTab.Controls.Add(btnStopRecord);
+        _experimentTab.Controls.Add(btnSettings);
     }
 
     // ==================== 构建消息日志 ====================
@@ -300,8 +345,8 @@ public partial class MainForm : Form
             ScrollBars = RichTextBoxScrollBars.Vertical
         };
 
-        Controls.Add(lblTitle);
-        Controls.Add(rtbLog);
+        _experimentTab.Controls.Add(lblTitle);
+        _experimentTab.Controls.Add(rtbLog);
     }
 
     private void AppendLogMessage(MasterMessage msg)

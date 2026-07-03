@@ -8,7 +8,7 @@ namespace ISO11820;
 static class Program
 {
     [STAThread]
-    static void Main()
+    static void Main(string[] args)
     {
         ApplicationConfiguration.Initialize();
 
@@ -27,6 +27,13 @@ static class Program
         var initializer = new DatabaseInitializer(dbPath);
         initializer.Initialize();
 
+        // ===== 测试模式 =====
+        if (args.Contains("--test"))
+        {
+            RunTests();
+            return;
+        }
+
         // 4. 创建共享依赖
         var db = new DbHelper(dbPath);
 
@@ -44,5 +51,51 @@ static class Program
             loginForm.LoggedInUser,
             loginForm.LoggedInRole
         ));
+    }
+
+    /// <summary>
+    /// 运行自动测试（命令行模式：dotnet run -- --test）
+    /// </summary>
+    private static void RunTests()
+    {
+        Console.WriteLine("========================================");
+        Console.WriteLine("  ISO 11820 核心流程自动测试");
+        Console.WriteLine("  龚小倩");
+        Console.WriteLine("========================================");
+        Console.WriteLine();
+
+        var results = TestRunner.RunAutoTests();
+        int passed = 0, failed = 0;
+
+        foreach (var r in results)
+        {
+            if (r.Passed)
+            {
+                Console.WriteLine($"  ✅ {r.Name}: {r.Message}");
+                passed++;
+            }
+            else
+            {
+                Console.WriteLine($"  ❌ {r.Name}: {r.Message}");
+                failed++;
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("========================================");
+        Console.WriteLine($"  结果: {passed} 通过, {failed} 失败, {results.Count} 总计");
+        Console.WriteLine("========================================");
+
+        // 人工测试清单
+        Console.WriteLine();
+        Console.WriteLine("--- 人工测试检查清单 ---");
+        var manual = TestRunner.GetManualChecklist();
+        foreach (var item in manual)
+        {
+            Console.WriteLine($"  □ [{item.Id}] {item.Name} — {item.Criteria} ({item.Method})");
+        }
+
+        Console.WriteLine();
+        try { Console.ReadKey(); } catch { /* 无控制台输入时忽略 */ }
     }
 }
