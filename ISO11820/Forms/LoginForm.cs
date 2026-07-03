@@ -1,3 +1,6 @@
+using System;
+using System.Drawing;
+using System.Windows.Forms;
 using ISO11820.Core;
 using ISO11820.Data;
 
@@ -5,41 +8,56 @@ namespace ISO11820.Forms;
 
 /// <summary>
 /// 登录窗体 — 角色选择 + 密码验证。
-/// 角色 C（廖紫彤）负责开发。
-/// 提交序号：#5
-/// 功能：选择管理员/试验员 -> 输入密码 -> 调用 DbHelper 验证 -> 进入主界面
+/// 角色 C 负责。提交序号：#5
 /// </summary>
 public class LoginForm : Form
 {
     // ========== UI 控件字段 ==========
-    private RadioButton rbAdmin = null!;      // 管理员单选按钮
-    private RadioButton rbOperator = null!;   // 试验员单选按钮
-    private TextBox txtPwd = null!;           // 密码输入框（掩码显示）
-    private Button btnLogin = null!;          // 登录按钮
-    private Label lblError = null!;           // 错误提示标签（红色）
+    private RadioButton rbAdmin = null!;
+    private RadioButton rbOperator = null!;
+    private TextBox txtPwd = null!;
+    private Button btnLogin = null!;
+    private Label lblError = null!;
 
-    /// <summary> 登录成功后的用户 ID（如 "1"），供外部（MainForm）读取 </summary>
+    private readonly DbHelper? _dbHelper;   // 可选的数据库帮助类实例
+
+    /// <summary> 登录成功后的用户 ID（如 "1"） </summary>
     public string LoggedInUserId { get; private set; } = string.Empty;
 
-    /// <summary> 登录成功后的角色（admin / operator），供外部（MainForm）读取 </summary>
-    public string LoggedInUserType { get; private set; } = string.Empty;
+    /// <summary> 登录成功后的用户名（admin / experimenter） </summary>
+    public string LoggedInUser { get; private set; } = string.Empty;
 
-    public LoginForm()
+    /// <summary> 登录成功后的角色（admin / operator） </summary>
+    public string LoggedInRole { get; private set; } = string.Empty;
+
+    // ========== 构造函数 ==========
+
+    // 无参构造（兼容旧用法）
+    public LoginForm() : this((DbHelper?)null) { }
+
+    // 带 DbHelper 的构造
+    public LoginForm(DbHelper? dbHelper)
     {
-        // 窗口基础属性：固定大小、居中、不可最大化
+        _dbHelper = dbHelper;
+        InitializeForm();
+        BuildUi();
+    }
+
+    // 带数据库路径字符串的构造
+    public LoginForm(string dbPath) : this(new DbHelper(dbPath)) { }
+
+    // ========== 初始化窗体 ==========
+    private void InitializeForm()
+    {
         Text = "ISO 11820 建筑材料不燃性试验系统 — 登录";
-        Size = new Size(480, 380);  // 稍微加宽窗口，容纳完整文字
+        Size = new Size(480, 380);
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
-
-        BuildUi();
     }
 
-    /// <summary>
-    /// 构建登录窗体的所有控件布局。
-    /// </summary>
+    // ========== 构建 UI ==========
     private void BuildUi()
     {
         // -------- 标题 --------
@@ -53,8 +71,7 @@ public class LoginForm : Form
             Size = new Size(420, 40)
         };
 
-        // -------- 角色选择（默认选中“管理员”） --------
-        // 使用固定宽度 80，避免遮挡后面的单选按钮
+        // -------- 角色选择 --------
         var lblRole = new Label
         {
             Text = "角色：",
@@ -64,7 +81,6 @@ public class LoginForm : Form
             TextAlign = ContentAlignment.MiddleLeft
         };
 
-        // 宽度加宽到 120，确保"管理员"3个字完整显示
         rbAdmin = new RadioButton
         {
             Text = "管理员",
@@ -82,7 +98,7 @@ public class LoginForm : Form
             Font = new Font("微软雅黑", 10)
         };
 
-        // -------- 密码输入（掩码显示） --------
+        // -------- 密码输入 --------
         var lblPwd = new Label
         {
             Text = "密码：",
@@ -101,7 +117,7 @@ public class LoginForm : Form
         };
         txtPwd.KeyDown += TxtPwd_KeyDown;
 
-        // -------- 错误提示（默认隐藏） --------
+        // -------- 错误提示 --------
         lblError = new Label
         {
             Text = string.Empty,
@@ -126,7 +142,7 @@ public class LoginForm : Form
         btnLogin.FlatAppearance.BorderSize = 0;
         btnLogin.Click += BtnLogin_Click;
 
-        // -------- 退出按钮（按 ESC 可退出） --------
+        // -------- 退出按钮 --------
         var btnCancel = new Button
         {
             Text = "退出",
@@ -137,7 +153,7 @@ public class LoginForm : Form
         };
         btnCancel.Click += (s, e) => Application.Exit();
 
-        // -------- 将所有控件添加到窗体 --------
+        // -------- 添加控件 --------
         Controls.Add(lblTitle);
         Controls.Add(lblRole);
         Controls.Add(rbAdmin);
@@ -148,14 +164,10 @@ public class LoginForm : Form
         Controls.Add(btnLogin);
         Controls.Add(btnCancel);
 
-        // 设置默认按钮：按 Enter 键触发登录，按 ESC 键触发退出
         AcceptButton = btnLogin;
         CancelButton = btnCancel;
     }
 
-    /// <summary>
-    /// 密码框按下回车键时，直接触发登录逻辑（提升操作效率）。
-    /// </summary>
     private void TxtPwd_KeyDown(object? sender, KeyEventArgs e)
     {
         if (e.KeyCode == Keys.Enter)
@@ -165,18 +177,13 @@ public class LoginForm : Form
         }
     }
 
-    /// <summary>
-    /// 登录按钮点击事件处理。
-    /// </summary>
+    // ==================== 登录逻辑 ====================
     private void BtnLogin_Click(object? sender, EventArgs e)
     {
         lblError.Text = string.Empty;
 
-        if (AppGlobal.Instance == null || string.IsNullOrEmpty(AppGlobal.Instance.DbPath))
-        {
-            lblError.Text = "系统初始化失败，请重新启动程序";
-            return;
-        }
+        // 优先使用传入的 DbHelper，否则从 AppGlobal 创建
+        DbHelper dbHelper = _dbHelper ?? new DbHelper(AppGlobal.Instance.DbPath);
 
         string username = rbAdmin.Checked ? "admin" : "experimenter";
         string pwd = txtPwd.Text;
@@ -189,13 +196,12 @@ public class LoginForm : Form
 
         try
         {
-            var dbHelper = new DbHelper(AppGlobal.Instance.DbPath);
             bool success = dbHelper.Login(username, pwd, out string userid, out string usertype);
-
             if (success)
             {
                 LoggedInUserId = userid;
-                LoggedInUserType = usertype;
+                LoggedInUser = username;
+                LoggedInRole = usertype;
                 DialogResult = DialogResult.OK;
                 Close();
             }
