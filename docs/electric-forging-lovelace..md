@@ -24,9 +24,9 @@
 | 角色 | 文档任务 | 代码任务 |
 |:---:|---------|---------|
 | **A（组长）** | ① 需求分析报告（主笔）✅<br>② 软件系统研究报告（主笔）<br>③ 答辩 PPT（主笔） | Core 层补充 + 集成联调 + 打包发布 |
-| **B** | ④ 概要设计报告（主笔）<br>⑤ 详细设计报告（主笔） | Data 层（数据库操作）+ CSV/Excel 导出服务 |
+| **B** | ④ 概要设计报告（主笔）✅<br>⑤ 详细设计报告（主笔）✅ | Data 层（数据库操作）+ CSV/Excel 导出服务 |
 | **C** | ⑥ 各文档界面相关插图/截图 | Forms 层（全部 UI 界面） |
-| **D** | ⑦ 演示视频录制<br>⑧ 研究报告"测试"章节提供素材 | Services 层（PDF 导出 + 文件管理）+ 测试 |
+| **D** | ⑦ 演示视频录制<br>⑧ 研究报告"测试"章节提供素材 | Services 层（PDF 导出 + 文件管理）+ 测试<br>+ 记录查询 Tab + 设备校准 Tab |
 
 > **核心原则**：文档不拆散——一份文档一个人从头写到尾，避免多人合写一章造成的风格不一致和沟通成本。
 > 代码也是一个人负责一整层或一类功能，分模块独立完成。
@@ -53,8 +53,8 @@
 | 9 | `feat: 按钮互锁逻辑（6按钮×5状态控制矩阵）` | C | Forms |
 | 10 | `feat: 新建试验窗体（环境+样品+参数+设备）` | C | Forms |
 | 11 | `feat: 试验现象记录窗体（火焰+质量+自动计算）` | C | Forms |
-| 12 | `feat: 记录查询 Tab（DataGridView+筛选+详情）` | C | Forms |
-| 13 | `feat: 设备校准 Tab（校准温显示+记录保存+历史）` | C | Forms |
+| 12 | `feat: 记录查询 Tab（DataGridView+筛选+详情）` | D | Forms |
+| 13 | `feat: 设备校准 Tab（校准温显示+记录保存+历史）` | D | Forms |
 | 14 | `feat: CSV 导出服务（试验完成自动生成）` | B | Services |
 | 15 | `feat: Excel 导出服务（三Sheet+嵌入图表）` | B | Services |
 | 16 | `feat: PDF 报告生成（试验概要+曲线图+判定结论）` | D | Services |
@@ -63,7 +63,7 @@
 | 19 | `test: 核心流程测试用例` | D | 测试 |
 | 20 | `feat: 打包发布（Release + win-x64 self-contained）` | A | 发布 |
 
-**统计**：A 5 次 / B 4 次 / C 9 次 / D 3 次（共 21 次，远超考核要求的 4×4=16 次最低线）
+**统计**：A 5 次 / B 4 次 / C 7 次 / D 5 次（共 21 次，远超考核要求的 4×4=16 次最低线）
 
 ---
 
@@ -119,8 +119,6 @@
 | ⑤ | `MainForm` 按钮互锁 | 6 个按钮（新建试验/开始升温/停止升温/开始记录/停止记录/参数设置），根据 5 个状态启用/禁用，直接按状态机矩阵控制 `.Enabled` |
 | ⑥ | `NewTestForm` | 弹出对话框，环境信息（温度/湿度自动读取）、样品信息（编号/名称/规格/直径/高度/质量）、试验参数（模式/时长）、设备信息自动带出；必填验证通过后调用 DbHelper.InsertTest() + TestController.GoToPreparing() |
 | ⑦ | 试验现象记录窗体 | 持续火焰 CheckBox + 火焰时刻/持续时间（火焰时才启用）、试验后质量（必填）、备注；保存时自动计算失重率= (pre-post)/pre×100%、温升=finalTS - 初始温度，调用 DbHelper.UpdateTestResult()，flag→"10000000" |
-| ⑧ | 记录查询 Tab | DataGridView 绑定查询结果，顶部筛选区（日期范围 DateTimePicker + 样品编号 TextBox + 查询按钮），双击行查看详情，选中行可导出 Excel |
-| ⑨ | 设备校准 Tab | 实时显示校准温度（Tcal 通道），记录校准数据（9 个热电偶测温点），计算均值+偏差，保存 CalibrationRecords，下方 DataGridView 展示历史校准记录 |
 
 **⚠️ 跨线程要点**：DataBroadcast 事件在后台线程触发，C 的所有 UI 更新必须 `Invoke`：
 
@@ -142,7 +140,7 @@ private void OnDataBroadcast(object sender, DataBroadcastEventArgs e)
 
 ---
 
-### 4-4 D — Services 层（PDF 导出 + 文件管理）
+### 4-4 D — Services 层 + 查询/校准 Tab（PDF 导出 + 文件管理 + 两个 Tab）
 
 > D 负责文件级别的导出和管理，也是最后一批代码模块。
 
@@ -150,6 +148,9 @@ private void OnDataBroadcast(object sender, DataBroadcastEventArgs e)
 - `PdfExportService.cs`：使用 PDFsharp-MigraDoc 6.x，生成 PDF 报告。内容包括：试验概要信息（样品/日期/操作员/判定结论）、温度曲线截图（从 OxyPlot 导出 PNG 嵌入 PDF）、统计汇总（温升/失重率/最长火焰时间）。**注意中文字体配置**（需指定微软雅黑或 SimSun 路径）
 - `FileStorageManager.cs`：自动创建目录 `{BaseDir}\TestData\{ProductId}\{TestId}\` 和 `{BaseDir}\Reports\`；提供统一路径生成方法 `GetCsvPath()`、`GetReportPath()`
 - 测试：编写测试检查清单，执行全流程回归测试，记录 Bug 并修复
+此外，D 还负责 Forms 层的两个 Tab 页面：
+- 记录查询 Tab（提交序号 12）：DataGridView 绑定查询结果，顶部筛选区（日期范围 DateTimePicker + 样品编号 TextBox + 查询按钮），双击行查看详情，选中行可导出 Excel
+- 设备校准 Tab（提交序号 13）：实时显示校准温度（Tcal 通道），记录校准数据（9 个热电偶测温点），计算均值+偏差，保存 CalibrationRecords，下方 DataGridView 展示历史校准记录
 
 **检查点**：PDF 能正常生成、中文不显示为方块、目录自动创建、文件路径正确。
 
@@ -211,8 +212,8 @@ dotnet publish ISO11820/ISO11820/ISO11820.csproj -c Release -r win-x64 --self-co
 | 文档 | 负责人 | 方式 | 状态 |
 |------|:---:|------|:---:|
 | 需求分析报告 | **A 主笔** | AI 辅助生成全文档，A 审核修改 | ✅ 已完成 |
-| 概要设计报告 | **B 主笔** | AI 辅助生成全文档，B 审核修改 | ⬜ 待做 |
-| 详细设计报告 | **B 主笔** | AI 辅助生成全文档，B 审核修改 | ⬜ 待做 |
+| 概要设计报告 | **B 主笔** | AI 辅助生成全文档，B 审核修改 | ✅ 已完成 |
+| 详细设计报告 | **B 主笔** | AI 辅助生成全文档，B 审核修改 | ✅ 已完成 |
 | 软件系统研究报告 | **A 主笔** | AI 辅助生成全文档（6 章完整），D 提供测试章节素材 | ⬜ 待做 |
 | 答辩 PPT | **A 主笔** | AI 生成 PPT 框架+内容，A 调整排版 | ⬜ 待做 |
 | 演示视频 | **D 录制** | D 操作软件录制 5 分钟演示视频 | ⬜ 待做 |
@@ -275,7 +276,7 @@ dotnet publish ISO11820/ISO11820/ISO11820.csproj -c Release -r win-x64 --self-co
 | 仓库 | 同一 GitHub 仓库，`main` 分支 |
 | 提交格式 | `feat: 中文描述` / `fix: 中文描述` / `docs: 中文描述` / `test: 中文描述` |
 | 提交者 | 必须用自己的 GitHub 账号提交，**禁止代提交**（证明每个人参与了开发） |
-| 最低提交数 | A≥5 次 / B≥4 次 / C≥9 次 / D≥3 次 |
+| 最低提交数 | A≥5 次 / B≥4 次 / C≥7 次 / D≥5 次 |
 | 提交信息模板 | `feat: <功能描述>` — 每次提交对应上面提交序列表中的一条 |
 
 ---
@@ -285,8 +286,8 @@ dotnet publish ISO11820/ISO11820/ISO11820.csproj -c Release -r win-x64 --self-co
 | # | 交付物 | 格式 | 负责人 |
 |:---:|--------|------|:---:|
 | 1 | 需求分析报告 | .docx | A ✅ |
-| 2 | 概要设计报告 | .docx | B |
-| 3 | 详细设计报告 | .docx | B |
+| 2 | 概要设计报告 | .docx | B ✅ |
+| 3 | 详细设计报告 | .docx | B ✅ |
 | 4 | 完整源码 + Git 历史 | GitHub 仓库 | 全员 |
 | 5 | 可运行程序 | 发布版 .exe | A |
 | 6 | 软件系统研究报告 | .docx | A |
