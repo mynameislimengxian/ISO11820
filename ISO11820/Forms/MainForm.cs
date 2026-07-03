@@ -1,4 +1,5 @@
 using ISO11820.Core;
+using ISO11820.Data;
 using OxyPlot;
 using OxyPlot.Axes;
 using OxyPlot.Series;
@@ -7,8 +8,8 @@ using OxyPlot.WindowsForms;
 namespace ISO11820.Forms;
 
 /// <summary>
-/// 主窗体 — 试验控制 + 实时数据显示 + 曲线图 + 记录查询。
-/// 角色 C 负责。当前阶段：温度面板（②）。
+/// 主窗体 — 试验控制 + 记录查询 + 设备校准。
+/// 使用 TabControl 分页，各 Tab 由团队成员分别负责。
 /// </summary>
 public partial class MainForm : Form
 {
@@ -42,25 +43,91 @@ public partial class MainForm : Form
     // 不能直接用 e.ElapsedSeconds，因为它只在 Recording 状态才计时。
     private double _chartTimeSeconds;
 
-    public MainForm()
+    // ========== 系统消息日志 ==========
+    private RichTextBox rtbLog = null!;
+
+    // ========== TabControl ==========
+    private TabControl _tabControl = null!;
+    private TabPage _experimentTab = null!;
+    private TabPage _recordQueryTab = null!;
+    private TabPage _calibrationTab = null!;
+
+    private RecordQueryTab _recordQueryControl = null!;
+    private CalibrationTab _calibrationControl = null!;
+
+    /// <summary>试验控制器（Core 层）</summary>
+    public TestController Controller => _controller;
+
+    /// <summary>数据库操作（Data 层）</summary>
+    public DbHelper Db { get; }
+
+    /// <summary>当前登录的操作员用户名</summary>
+    public string CurrentOperator { get; }
+
+    /// <summary>当前登录的角色（admin/operator）</summary>
+    public string CurrentRole { get; }
+
+    public MainForm(DbHelper db, string currentOperator, string currentRole)
     {
+        Db = db;
+        CurrentOperator = currentOperator;
+        CurrentRole = currentRole;
+
         Text = "ISO 11820 建筑材料不燃性试验系统";
-        Size = new Size(1280, 800);
+        Size = new Size(1280, 850);
         StartPosition = FormStartPosition.CenterScreen;
 
+        BuildTabControl();
+        BuildExperimentTab();
         BuildTemperaturePanel();
         BuildTemperatureChart();
+        BuildMessageLog();
 
         // 订阅数据广播事件（在后台线程触发，必须用 Invoke 切回 UI 线程）
         _controller.DataBroadcast += OnDataBroadcast;
+    }
+
+    private void BuildTabControl()
+    {
+        _tabControl = new TabControl
+        {
+            Dock = DockStyle.Fill,
+            Font = new Font("Microsoft YaHei", 10)
+        };
+
+        // --- 试验控制 Tab（廖紫彤负责） ---
+        _experimentTab = new TabPage("试验控制");
+        _tabControl.TabPages.Add(_experimentTab);
+
+        // --- 记录查询 Tab（龚小倩负责） ---
+        _recordQueryTab = new TabPage("记录查询");
+        _recordQueryControl = new RecordQueryTab(Db);
+        _recordQueryControl.Dock = DockStyle.Fill;
+        _recordQueryTab.Controls.Add(_recordQueryControl);
+        _tabControl.TabPages.Add(_recordQueryTab);
+
+        // --- 设备校准 Tab（龚小倩负责） ---
+        _calibrationTab = new TabPage("设备校准");
+        _calibrationControl = new CalibrationTab(Db, _controller);
+        _calibrationControl.Dock = DockStyle.Fill;
+        _calibrationTab.Controls.Add(_calibrationControl);
+        _tabControl.TabPages.Add(_calibrationTab);
+
+        Controls.Add(_tabControl);
+    }
+
+    private void BuildExperimentTab()
+    {
+        // 试验控制 Tab 的内容将由廖紫彤的 BuildTemperaturePanel/BuildTemperatureChart/BuildMessageLog 填充
+        // 这些控件直接添加到 _experimentTab 中
     }
 
     private void BuildTemperaturePanel()
     {
         var panel = new Panel
         {
-            Location = new Point(20, 20),
-            Size = new Size(1230, 150),
+            Location = new Point(0, 0),
+            Size = new Size(1250, 150),
             BorderStyle = BorderStyle.FixedSingle,
             BackColor = Color.FromArgb(30, 30, 30)
         };
@@ -159,7 +226,7 @@ public partial class MainForm : Form
         panel.Controls.Add(lblProductIdTitle);
         panel.Controls.Add(lblProductIdValue);
 
-        Controls.Add(panel);
+        _experimentTab.Controls.Add(panel);
     }
 
     /// <summary>
@@ -189,6 +256,50 @@ public partial class MainForm : Form
         panel.Controls.Add(lblValue);
 
         return (lblTitle, lblValue);
+    }
+
+    /// <summary>
+    /// 构建系统消息日志：RichTextBox，每条消息 "HH:mm:ss 内容"，
+    /// 普通消息黑色，警告消息橙红色，追加后自动滚动到底部。
+    /// </summary>
+    private void BuildMessageLog()
+    {
+        var lblTitle = new Label
+        {
+            Text = "系统消息日志",
+            Font = new Font("微软雅黑", 10, FontStyle.Bold),
+            Location = new Point(0, 570),
+            Size = new Size(200, 25)
+        };
+
+        rtbLog = new RichTextBox
+        {
+            Location = new Point(0, 595),
+            Size = new Size(1250, 150),
+            ReadOnly = true,
+            BackColor = Color.White,
+            Font = new Font("Consolas", 10),
+            ScrollBars = RichTextBoxScrollBars.Vertical
+        };
+
+        _experimentTab.Controls.Add(lblTitle);
+        _experimentTab.Controls.Add(rtbLog);
+    }
+
+    /// <summary>
+    /// 向日志追加一条消息。type 为 "warning" 时显示橙红色，其余为普通黑色。
+    /// </summary>
+    private void AppendLogMessage(MasterMessage msg)
+    {
+        Color color = msg.Type == "warning" ? Color.OrangeRed : Color.Black;
+
+        rtbLog.SelectionStart = rtbLog.TextLength;
+        rtbLog.SelectionLength = 0;
+        rtbLog.SelectionColor = color;
+        rtbLog.AppendText($"{msg.Time} {msg.Content}{Environment.NewLine}");
+        rtbLog.SelectionColor = rtbLog.ForeColor;
+
+        rtbLog.ScrollToCaret();
     }
 
     /// <summary>
@@ -253,12 +364,12 @@ public partial class MainForm : Form
         plotView = new PlotView
         {
             Model = plotModel,
-            Location = new Point(20, 180),
-            Size = new Size(1230, 380),
+            Location = new Point(0, 160),
+            Size = new Size(1250, 400),
             BackColor = Color.FromArgb(20, 20, 20)
         };
 
-        Controls.Add(plotView);
+        _experimentTab.Controls.Add(plotView);
     }
 
     /// <summary>
@@ -350,7 +461,11 @@ public partial class MainForm : Form
             AppendChartPoint(_chartTimeSeconds, e.Tf1, e.Tf2, e.Ts, e.Tc);
         }
 
-        // TODO: e.Messages 将在「④ 系统消息日志」阶段接入 RichTextBox
+        // 系统消息日志：把本次广播携带的所有消息追加显示
+        foreach (var msg in e.Messages)
+        {
+            AppendLogMessage(msg);
+        }
     }
 
     /// <summary>新一轮升温开始时（Idle）清空曲线数据，重新计时</summary>
