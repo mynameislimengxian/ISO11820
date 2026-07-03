@@ -457,7 +457,8 @@ public partial class MainForm : Form
 
     private void BtnSettings_Click(object? sender, EventArgs e)
     {
-        MessageBox.Show("参数设置功能待实现", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        using var form = new SettingsForm();
+        form.ShowDialog(this);
     }
 
     // ==================== 数据广播事件 ====================
