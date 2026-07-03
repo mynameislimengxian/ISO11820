@@ -211,10 +211,10 @@ public class ExcelExportService
         var xRange = sheet.Cells[$"A1:A{dataCount}"];
 
         // 4 条折线
-        AddSeries(chart, sheet, $"B1:B{dataCount}", xRange, "炉温1 (TF1)");
-        AddSeries(chart, sheet, $"C1:C{dataCount}", xRange, "炉温2 (TF2)");
-        AddSeries(chart, sheet, $"D1:D{dataCount}", xRange, "表面温 (TS)");
-        AddSeries(chart, sheet, $"E1:E{dataCount}", xRange, "中心温 (TC)");
+        AddSeries(chart, sheet, sheet.Cells[$"B1:B{dataCount}"], xRange, "炉温1 (TF1)");
+        AddSeries(chart, sheet, sheet.Cells[$"C1:C{dataCount}"], xRange, "炉温2 (TF2)");
+        AddSeries(chart, sheet, sheet.Cells[$"D1:D{dataCount}"], xRange, "表面温 (TS)");
+        AddSeries(chart, sheet, sheet.Cells[$"E1:E{dataCount}"], xRange, "中心温 (TC)");
 
         // X 轴标签
         chart.XAxis.Title.Text = "时间 (秒)";
@@ -229,7 +229,7 @@ public class ExcelExportService
     private static void AddSeries(ExcelChart chart, ExcelWorksheet sheet,
         ExcelRange yRange, ExcelRange xRange, string name)
     {
-        var series = chart.Series.Add(yRange, xRange);
+        var series = chart.Series.Add(xRange, yRange);
         series.Header = name;
     }
 }
