@@ -1,4 +1,8 @@
 using ISO11820.Core;
+using OxyPlot;
+using OxyPlot.Axes;
+using OxyPlot.Series;
+using OxyPlot.WindowsForms;
 
 namespace ISO11820.Forms;
 
@@ -22,6 +26,22 @@ public partial class MainForm : Form
     private Label lblStateValue = null!;
     private Label lblProductIdValue = null!;
 
+    // ========== 曲线图 ==========
+    private PlotView plotView = null!;
+    private PlotModel plotModel = null!;
+    private LineSeries seriesTf1 = null!;
+    private LineSeries seriesTf2 = null!;
+    private LineSeries seriesTs = null!;
+    private LineSeries seriesTc = null!;
+
+    // 滚动窗口：只保留最近 10 分钟的数据点（10分钟 = 600秒）
+    private const double PlotWindowSeconds = 600;
+
+    // 曲线横轴使用的累计时间（秒）。DataBroadcast 每 800ms 触发一次，
+    // 由 MainForm 自行累加，覆盖 Idle 之外的所有阶段（升温/就绪/记录/完成），
+    // 不能直接用 e.ElapsedSeconds，因为它只在 Recording 状态才计时。
+    private double _chartTimeSeconds;
+
     public MainForm()
     {
         Text = "ISO 11820 建筑材料不燃性试验系统";
@@ -29,6 +49,7 @@ public partial class MainForm : Form
         StartPosition = FormStartPosition.CenterScreen;
 
         BuildTemperaturePanel();
+        BuildTemperatureChart();
 
         // 订阅数据广播事件（在后台线程触发，必须用 Invoke 切回 UI 线程）
         _controller.DataBroadcast += OnDataBroadcast;
@@ -170,7 +191,113 @@ public partial class MainForm : Form
         return (lblTitle, lblValue);
     }
 
-    // ========== 数据广播事件处理 
+    /// <summary>
+    /// 构建 OxyPlot 实时温度曲线：4 条折线（TF1红/TF2橙/TS蓝/TC绿），
+    /// X 轴时间（秒）滚动 10 分钟窗口，Y 轴固定 0~800°C。
+    /// </summary>
+    private void BuildTemperatureChart()
+    {
+        plotModel = new PlotModel
+        {
+            Title = "温度实时曲线",
+            TitleColor = OxyColors.White,
+            PlotAreaBorderColor = OxyColors.Gray,
+            Background = OxyColors.FromRgb(20, 20, 20),
+            TextColor = OxyColors.Gainsboro
+        };
+
+        var xAxis = new LinearAxis
+        {
+            Position = AxisPosition.Bottom,
+            Title = "时间 (秒)",
+            TitleColor = OxyColors.Gainsboro,
+            TextColor = OxyColors.Gainsboro,
+            MajorGridlineStyle = LineStyle.Dot,
+            MajorGridlineColor = OxyColors.FromRgb(60, 60, 60),
+            Minimum = 0,
+            Maximum = PlotWindowSeconds
+        };
+
+        var yAxis = new LinearAxis
+        {
+            Position = AxisPosition.Left,
+            Title = "温度 (°C)",
+            TitleColor = OxyColors.Gainsboro,
+            TextColor = OxyColors.Gainsboro,
+            MajorGridlineStyle = LineStyle.Dot,
+            MajorGridlineColor = OxyColors.FromRgb(60, 60, 60),
+            Minimum = 0,
+            Maximum = 800
+        };
+
+        plotModel.Axes.Add(xAxis);
+        plotModel.Axes.Add(yAxis);
+
+        seriesTf1 = new LineSeries { Title = "TF1 炉温1", Color = OxyColors.Red, StrokeThickness = 1.5 };
+        seriesTf2 = new LineSeries { Title = "TF2 炉温2", Color = OxyColors.Orange, StrokeThickness = 1.5 };
+        seriesTs = new LineSeries { Title = "TS 表面温度", Color = OxyColors.DeepSkyBlue, StrokeThickness = 1.5 };
+        seriesTc = new LineSeries { Title = "TC 中心温度", Color = OxyColors.LimeGreen, StrokeThickness = 1.5 };
+
+        plotModel.Series.Add(seriesTf1);
+        plotModel.Series.Add(seriesTf2);
+        plotModel.Series.Add(seriesTs);
+        plotModel.Series.Add(seriesTc);
+
+        plotModel.Legends.Add(new OxyPlot.Legends.Legend
+        {
+            LegendPosition = OxyPlot.Legends.LegendPosition.TopRight,
+            LegendTextColor = OxyColors.Gainsboro,
+            LegendBackground = OxyColor.FromAColor(180, OxyColors.Black)
+        });
+
+        plotView = new PlotView
+        {
+            Model = plotModel,
+            Location = new Point(20, 180),
+            Size = new Size(1230, 380),
+            BackColor = Color.FromArgb(20, 20, 20)
+        };
+
+        Controls.Add(plotView);
+    }
+
+    /// <summary>
+    /// 向曲线追加一个数据点，并维护滚动窗口（只保留最近 10 分钟）。
+    /// </summary>
+    private void AppendChartPoint(double elapsedSeconds, double tf1, double tf2, double ts, double tc)
+    {
+        seriesTf1.Points.Add(new DataPoint(elapsedSeconds, tf1));
+        seriesTf2.Points.Add(new DataPoint(elapsedSeconds, tf2));
+        seriesTs.Points.Add(new DataPoint(elapsedSeconds, ts));
+        seriesTc.Points.Add(new DataPoint(elapsedSeconds, tc));
+
+        // 滚动窗口：移除超出 10 分钟窗口之外的旧点
+        TrimSeries(seriesTf1, elapsedSeconds);
+        TrimSeries(seriesTf2, elapsedSeconds);
+        TrimSeries(seriesTs, elapsedSeconds);
+        TrimSeries(seriesTc, elapsedSeconds);
+
+        // X 轴跟随滚动
+        var xAxis = plotModel.Axes[0];
+        if (elapsedSeconds > PlotWindowSeconds)
+        {
+            xAxis.Minimum = elapsedSeconds - PlotWindowSeconds;
+            xAxis.Maximum = elapsedSeconds;
+        }
+
+        plotModel.InvalidatePlot(true);
+    }
+
+    private void TrimSeries(LineSeries series, double currentSeconds)
+    {
+        double cutoff = currentSeconds - PlotWindowSeconds;
+        while (series.Points.Count > 0 && series.Points[0].X < cutoff)
+        {
+            series.Points.RemoveAt(0);
+        }
+    }
+
+    // ========== 数据广播事件处理 ==========
 
     /// <summary>
     /// ⚠️ 跨线程要点：DataBroadcast 事件在后台线程触发，
@@ -212,7 +339,35 @@ public partial class MainForm : Form
             lblProductIdValue.Text = _controller.CurrentProductId;
         }
 
+        // 更新曲线图：Idle 状态清空曲线并重置计时；其余状态每次广播累加 0.8 秒
+        if (e.State == TestState.Idle)
+        {
+            ResetChart();
+        }
+        else
+        {
+            _chartTimeSeconds += 0.8;
+            AppendChartPoint(_chartTimeSeconds, e.Tf1, e.Tf2, e.Ts, e.Tc);
+        }
+
         // TODO: e.Messages 将在「④ 系统消息日志」阶段接入 RichTextBox
-        // TODO: 曲线图更新将在「③ OxyPlot 实时温度曲线」阶段接入
+    }
+
+    /// <summary>新一轮升温开始时（Idle）清空曲线数据，重新计时</summary>
+    private void ResetChart()
+    {
+        if (seriesTf1.Points.Count == 0) return; // 已经是空的，不用重复清
+
+        _chartTimeSeconds = 0;
+        seriesTf1.Points.Clear();
+        seriesTf2.Points.Clear();
+        seriesTs.Points.Clear();
+        seriesTc.Points.Clear();
+
+        var xAxis = plotModel.Axes[0];
+        xAxis.Minimum = 0;
+        xAxis.Maximum = PlotWindowSeconds;
+
+        plotModel.InvalidatePlot(true);
     }
 }
