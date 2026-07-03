@@ -402,7 +402,7 @@ public partial class MainForm : Form
 
     private void BtnNewTest_Click(object? sender, EventArgs e)
     {
-        using var form = new NewTestForm(Controller);
+        using var form = new NewTestForm(Controller, _dbHelper ?? new DbHelper(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppGlobal.Instance.DbPath)));
         if (form.ShowDialog() == DialogResult.OK)
         {
             // 更新产品编号显示
@@ -459,10 +459,10 @@ public partial class MainForm : Form
             double initialTemp = Controller.Ts; // 样品初始温度（记录开始时的温度）
 
             // 如果 preWeight 为 0（兼容旧数据），尝试从数据库读取
+            var db = _dbHelper ?? new DbHelper(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppGlobal.Instance.DbPath));
             if (preWeight <= 0 && !string.IsNullOrEmpty(productId) && !string.IsNullOrEmpty(testId))
             {
-                var dbHelper = new DbHelper(AppGlobal.Instance.DbPath);
-                var existingTest = dbHelper.GetTest(productId, testId);
+                var existingTest = db.GetTest(productId, testId);
                 if (existingTest != null)
                 {
                     preWeight = existingTest.PreWeight;
@@ -470,7 +470,7 @@ public partial class MainForm : Form
                 }
             }
 
-            using var form = new PhenomenonForm(Controller, productId, testId, preWeight, initialTemp);
+            using var form = new PhenomenonForm(Controller, db, productId, testId, preWeight, initialTemp);
             if (form.ShowDialog() == DialogResult.OK)
             {
                 UpdateButtonStates(Controller.State);
@@ -566,7 +566,7 @@ public partial class MainForm : Form
     {
         try
         {
-            var dbHelper = _dbHelper ?? new DbHelper(AppGlobal.Instance.DbPath);
+            var db = _dbHelper ?? new DbHelper(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppGlobal.Instance.DbPath));
 
             // 1. CSV 导出 — 温度时间序列
             if (_temperatureRecords.Count > 0)
@@ -583,7 +583,7 @@ public partial class MainForm : Form
             _temperatureRecords.Clear();
 
             // 2. PDF 导出 — 试验报告
-            var pdfService = new PdfExportService(dbHelper);
+            var pdfService = new PdfExportService(db);
             string pdfPath = pdfService.ExportPdf(productId, testId);
             AppendLogMessage(new MasterMessage
             {

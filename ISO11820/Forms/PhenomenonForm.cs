@@ -31,10 +31,12 @@ public class PhenomenonForm : Form
     private readonly string _testId;
     private readonly double _preWeight;
     private readonly double _initialTemp;
+    private readonly DbHelper _dbHelper;
 
-    public PhenomenonForm(TestController controller, string productId, string testId, double preWeight, double initialTemp)
+    public PhenomenonForm(TestController controller, DbHelper dbHelper, string productId, string testId, double preWeight, double initialTemp)
     {
         _controller = controller;
+        _dbHelper = dbHelper;
         _productId = productId;
         _testId = testId;
         _preWeight = preWeight;
@@ -312,7 +314,7 @@ public class PhenomenonForm : Form
         try
         {
             // 获取当前试验记录
-            var dbHelper = new DbHelper(AppGlobal.Instance.DbPath);
+            var dbHelper = _dbHelper;
             var existingTest = dbHelper.GetTest(_productId, _testId);
 
             if (existingTest == null)

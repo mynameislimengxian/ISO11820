@@ -29,10 +29,12 @@ public class NewTestForm : Form
     private Label lblError = null!;
 
     private readonly TestController _controller;
+    private readonly DbHelper _dbHelper;
 
-    public NewTestForm(TestController controller)
+    public NewTestForm(TestController controller, DbHelper dbHelper)
     {
         _controller = controller;
+        _dbHelper = dbHelper;
         InitializeForm();
         BuildUi();
         LoadDeviceInfo();
@@ -482,13 +484,11 @@ public class NewTestForm : Form
 
         try
         {
-            var dbHelper = new DbHelper(AppGlobal.Instance.DbPath);
-
             // 先检查样品是否存在，不存在则创建（外键约束要求）
-            var existingProduct = dbHelper.GetProduct(txtProductId.Text);
+            var existingProduct = _dbHelper.GetProduct(txtProductId.Text);
             if (existingProduct == null)
             {
-                dbHelper.InsertProduct(new ProductMaster
+                _dbHelper.InsertProduct(new ProductMaster
                 {
                     ProductId = txtProductId.Text,
                     ProductName = txtProductName.Text,
@@ -525,7 +525,7 @@ public class NewTestForm : Form
             };
 
             _controller.SetTestMode(TestMode.Standard60Min, 3600);
-            dbHelper.InsertTest(test);
+            _dbHelper.InsertTest(test);
             _controller.CurrentProductId = txtProductId.Text;
             _controller.CurrentTestId = testId;
             _controller.CurrentPreWeight = preWeight;
