@@ -6,7 +6,6 @@ namespace ISO11820.Forms;
 /// <summary>
 /// 登录窗体 — 角色选择 + 密码验证。
 /// 角色 C 负责。
-/// </summary>
 public class LoginForm : Form
 {
     private RadioButton rbAdmin = null!;
