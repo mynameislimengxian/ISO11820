@@ -170,7 +170,7 @@ public partial class MainForm : Form
         return (lblTitle, lblValue);
     }
 
-    // ========== 数据广播事件处理 ==========
+    // ========== 数据广播事件处理 
 
     /// <summary>
     /// ⚠️ 跨线程要点：DataBroadcast 事件在后台线程触发，
