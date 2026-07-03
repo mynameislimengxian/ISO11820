@@ -42,7 +42,7 @@ public class NewTestForm : Form
     private void InitializeForm()
     {
         Text = "新建试验 — ISO 11820";
-        Size = new Size(620, 680);
+        Size = new Size(620, 720);
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -380,7 +380,7 @@ public class NewTestForm : Form
         {
             Text = "创建试验",
             Location = new Point(150, y),
-            Size = new Size(140, 42),
+            Size = new Size(160, 42),
             Font = new Font("微软雅黑", 11, FontStyle.Bold),
             BackColor = Color.FromArgb(0, 120, 215),
             ForeColor = Color.White,
