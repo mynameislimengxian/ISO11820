@@ -6,7 +6,7 @@ using ISO11820.Data;
 using Microsoft.Data.Sqlite;
 
 namespace ISO11820.Forms;
-
+//1
 public class NewTestForm : Form
 {
     private TextBox txtAmbTemp = null!;
