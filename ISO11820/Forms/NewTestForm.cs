@@ -44,11 +44,12 @@ public class NewTestForm : Form
     private void InitializeForm()
     {
         Text = "新建试验 — ISO 11820";
-        Size = new Size(640, 760);
+        Size = new Size(640, 680);
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
+        AutoScroll = true;
         BackColor = Color.White;
     }
 
