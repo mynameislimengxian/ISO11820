@@ -44,7 +44,7 @@ public class NewTestForm : Form
     private void InitializeForm()
     {
         Text = "新建试验 — ISO 11820";
-        Size = new Size(640, 680);
+        Size = new Size(700, 680);
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -56,17 +56,18 @@ public class NewTestForm : Form
     private void BuildUi()
     {
         int y = 15;
-        int labelWidth = 110;
-        int rowHeight = 32;
+        int labelWidth = 120;
+        int rowHeight = 38;
+        int inputWidth = 160;
 
         // ===== 环境信息 =====
         var grpEnvironment = new GroupBox
         {
             Text = "环境信息",
             Location = new Point(15, y),
-            Size = new Size(570, 75)
+            Size = new Size(620, 75)
         };
-        y += 85;
+        y += 95;
 
         var lblAmbTemp = new Label
         {
@@ -78,7 +79,7 @@ public class NewTestForm : Form
         txtAmbTemp = new TextBox
         {
             Location = new Point(140, 26),
-            Size = new Size(120, 25),
+            Size = new Size(140, 25),
             Text = "25.0"
         };
 
@@ -92,7 +93,7 @@ public class NewTestForm : Form
         txtAmbHumi = new TextBox
         {
             Location = new Point(420, 26),
-            Size = new Size(120, 25),
+            Size = new Size(140, 25),
             Text = "60.0"
         };
 
@@ -107,7 +108,7 @@ public class NewTestForm : Form
         {
             Text = "样品信息",
             Location = new Point(15, y),
-            Size = new Size(570, 205)
+            Size = new Size(620, 205)
         };
         y += 215;
 
@@ -123,7 +124,7 @@ public class NewTestForm : Form
         txtProductId = new TextBox
         {
             Location = new Point(140, rowY),
-            Size = new Size(240, 25),
+            Size = new Size(280, 25),
             Text = "TEST-001"
         };
         rowY += rowHeight;
@@ -138,7 +139,7 @@ public class NewTestForm : Form
         txtProductName = new TextBox
         {
             Location = new Point(140, rowY),
-            Size = new Size(240, 25),
+            Size = new Size(280, 25),
             Text = "石膏板"
         };
         rowY += rowHeight;
@@ -153,7 +154,7 @@ public class NewTestForm : Form
         txtSpecification = new TextBox
         {
             Location = new Point(140, rowY),
-            Size = new Size(240, 25)
+            Size = new Size(280, 25)
         };
         rowY += rowHeight;
 
@@ -167,7 +168,7 @@ public class NewTestForm : Form
         txtDiameter = new TextBox
         {
             Location = new Point(140, rowY),
-            Size = new Size(100, 25),
+            Size = new Size(120, 25),
             Text = "50.0"
         };
 
@@ -181,7 +182,7 @@ public class NewTestForm : Form
         txtHeight = new TextBox
         {
             Location = new Point(400, rowY),
-            Size = new Size(100, 25),
+            Size = new Size(120, 25),
             Text = "60.0"
         };
         rowY += rowHeight;
@@ -196,7 +197,7 @@ public class NewTestForm : Form
         txtPreWeight = new TextBox
         {
             Location = new Point(140, rowY),
-            Size = new Size(240, 25),
+            Size = new Size(280, 25),
             Text = "100.0"
         };
 
@@ -217,7 +218,7 @@ public class NewTestForm : Form
         {
             Text = "试验参数",
             Location = new Point(15, y),
-            Size = new Size(570, 85)
+            Size = new Size(620, 85)
         };
         y += 95;
 
@@ -233,7 +234,7 @@ public class NewTestForm : Form
         cboOperator = new ComboBox
         {
             Location = new Point(140, rowY),
-            Size = new Size(150, 25),
+            Size = new Size(180, 25),
             DropDownStyle = ComboBoxStyle.DropDownList
         };
         rowY += rowHeight;
@@ -248,7 +249,7 @@ public class NewTestForm : Form
         cboTestMode = new ComboBox
         {
             Location = new Point(140, rowY),
-            Size = new Size(150, 25),
+            Size = new Size(180, 25),
             DropDownStyle = ComboBoxStyle.DropDownList
         };
         cboTestMode.Items.Add("标准60分钟");
@@ -269,7 +270,7 @@ public class NewTestForm : Form
         nudCustomDuration = new NumericUpDown
         {
             Location = new Point(400, rowY),
-            Size = new Size(100, 25),
+            Size = new Size(120, 25),
             Minimum = 60,
             Maximum = 7200,
             Value = 600,
@@ -289,7 +290,7 @@ public class NewTestForm : Form
         {
             Text = "设备信息（自动读取）",
             Location = new Point(15, y),
-            Size = new Size(570, 85)
+            Size = new Size(620, 85)
         };
         y += 95;
 

@@ -298,9 +298,9 @@ public class TestController
         switch (State)
         {
             case TestState.Preparing:
-                // 升温阶段：TF1/TF2 向目标温度前进
-                Tf1 += _heatingRate * 0.8 + RandNoise();
-                Tf2 += _heatingRate * 0.8 + RandNoise();
+                // 升温阶段：指数趋近目标温度，避免冲过
+                Tf1 += (targetTemp - Tf1) * 0.08 + RandNoise();
+                Tf2 += (targetTemp - Tf2) * 0.08 + RandNoise();
                 Ts = Tf1 * 0.3 + RandNoise();
                 Tc = Tf1 * 0.25 + RandNoise();
                 Tcal = Tf1 + RandNoise() * 2;
