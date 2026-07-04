@@ -330,44 +330,49 @@ public class SystemFontResolver : IFontResolver
 
     public byte[] GetFont(string faceName)
     {
-        var fontPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), faceName + ".ttf");
-        if (File.Exists(fontPath))
-            return File.ReadAllBytes(fontPath);
+        var fontsDir = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
+        var candidates = new[]
+        {
+            Path.Combine(fontsDir, faceName + ".ttf"),
+            Path.Combine(fontsDir, faceName + ".ttc"),
+            Path.Combine(fontsDir, faceName + "bd.ttf"),
+            Path.Combine(fontsDir, "msyh.ttf"),
+            Path.Combine(fontsDir, "msyh.ttc"),
+            Path.Combine(fontsDir, "msyhbd.ttf"),
+            Path.Combine(fontsDir, "simsun.ttf"),
+            Path.Combine(fontsDir, "simsun.ttc"),
+            Path.Combine(fontsDir, "arial.ttf"),
+        };
 
-        fontPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), faceName + ".ttc");
-        if (File.Exists(fontPath))
-            return File.ReadAllBytes(fontPath);
+        foreach (var path in candidates)
+        {
+            if (File.Exists(path))
+                return File.ReadAllBytes(path);
+        }
 
-        // 回退到 Arial
-        fontPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf");
-        if (File.Exists(fontPath))
-            return File.ReadAllBytes(fontPath);
+        // 最后尝试搜索匹配的文件
+        try
+        {
+            var files = Directory.GetFiles(fontsDir, "*.ttf").Concat(Directory.GetFiles(fontsDir, "*.ttc"));
+            foreach (var f in files)
+            {
+                var name = Path.GetFileNameWithoutExtension(f).ToLower();
+                if (name.Contains("msyh") || name.Contains("microsoft") || name.Contains("yahei"))
+                    return File.ReadAllBytes(f);
+            }
+            // 返回任意可用字体
+            var first = files.FirstOrDefault();
+            if (first != null)
+                return File.ReadAllBytes(first);
+        }
+        catch { }
 
-        throw new FileNotFoundException($"Font not found: {faceName}");
+        throw new FileNotFoundException($"No font found for: {faceName}");
     }
 
     public FontResolverInfo? ResolveTypeface(string familyName, bool isBold, bool isItalic)
     {
-        string name = familyName switch
-        {
-            "Microsoft YaHei" => "msyh",
-            "SimSun" => "simsun",
-            "Arial" => "arial",
-            _ => familyName.ToLower()
-        };
-
-        string suffix = "";
-        if (isBold && isItalic) suffix = "bi";
-        else if (isBold) suffix = "b";
-        else if (isItalic) suffix = "i";
-
-        try
-        {
-            return new FontResolverInfo(name + suffix);
-        }
-        catch
-        {
-            return new FontResolverInfo("arial");
-        }
+        // 始终返回 "arial" 作为安全的回退
+        return new FontResolverInfo("arial");
     }
 }
