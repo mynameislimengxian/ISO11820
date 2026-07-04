@@ -49,7 +49,7 @@ public class PhenomenonForm : Form
     private void InitializeForm()
     {
         Text = "试验现象记录 — ISO 11820";
-        Size = new Size(600, 550);
+        Size = new Size(600, 440);
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -81,7 +81,7 @@ public class PhenomenonForm : Form
                 nudFlameDuration.Value = 0;
             }
         };
-        y += 40;
+        y += 35;
 
         var lblFlameTime = new Label
         {
@@ -117,7 +117,7 @@ public class PhenomenonForm : Form
             Value = 0,
             Enabled = false
         };
-        y += 45;
+        y += 35;
 
         // ===== 试验后质量（必填） =====
         var lblPostWeight = new Label
@@ -134,7 +134,7 @@ public class PhenomenonForm : Form
             Font = new Font("微软雅黑", 10)
         };
         txtPostWeight.TextChanged += (s, e) => CalculateResults();
-        y += 40;
+        y += 35;
 
         // ===== 计算结果显示 =====
         var grpResult = new GroupBox
@@ -143,7 +143,7 @@ public class PhenomenonForm : Form
             Location = new Point(30, y),
             Size = new Size(420, 90)
         };
-        y += 100;
+        y += 70;
 
         int rY = 22;
         var lblLostWeightTitle = new Label
@@ -214,7 +214,7 @@ public class PhenomenonForm : Form
             Size = new Size(350, 25),
             Font = new Font("微软雅黑", 10)
         };
-        y += 40;
+        y += 35;
 
         // ===== 错误提示 =====
         lblError = new Label
