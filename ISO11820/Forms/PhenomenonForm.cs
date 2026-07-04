@@ -30,17 +30,24 @@ public class PhenomenonForm : Form
     private readonly string _productId;
     private readonly string _testId;
     private readonly double _preWeight;
-    private readonly double _initialTemp;
+    private readonly double _initialTf1;
+    private readonly double _initialTf2;
+    private readonly double _initialTs;
+    private readonly double _initialTc;
     private readonly DbHelper _dbHelper;
 
-    public PhenomenonForm(TestController controller, DbHelper dbHelper, string productId, string testId, double preWeight, double initialTemp)
+    public PhenomenonForm(TestController controller, DbHelper dbHelper, string productId, string testId, double preWeight,
+        double initialTf1, double initialTf2, double initialTs, double initialTc)
     {
         _controller = controller;
         _dbHelper = dbHelper;
         _productId = productId;
         _testId = testId;
         _preWeight = preWeight;
-        _initialTemp = initialTemp;
+        _initialTf1 = initialTf1;
+        _initialTf2 = initialTf2;
+        _initialTs = initialTs;
+        _initialTc = initialTc;
 
         InitializeForm();
         BuildUi();
@@ -276,7 +283,7 @@ public class PhenomenonForm : Form
             lblLostWeight.Text = $"{lostWeight:F2}";
             lblLostWeightPer.Text = $"{lostWeightPer:F2}";
 
-            double tempRise = _controller.Ts - _initialTemp;
+            double tempRise = _controller.Ts - _initialTs;
             lblTempRise.Text = $"{tempRise:F2}";
         }
         else
@@ -335,9 +342,12 @@ public class PhenomenonForm : Form
 
             // 温升（使用当前最终温度 - 初始温度）
             // 从控制器获取当前温度
-            existingTest.DeltaTf = _controller.Tf1 - _initialTemp;
-            existingTest.DeltaTs = _controller.Ts - _initialTemp;
-            existingTest.DeltaTc = _controller.Tc - _initialTemp;
+            // 温升 = 最终温度 - 记录开始时的初始温度
+            existingTest.DeltaTf1 = _controller.Tf1 - _initialTf1;
+            existingTest.DeltaTf2 = _controller.Tf2 - _initialTf2;
+            existingTest.DeltaTf = (_controller.Tf1 - _initialTf1 + _controller.Tf2 - _initialTf2) / 2;
+            existingTest.DeltaTs = _controller.Ts - _initialTs;
+            existingTest.DeltaTc = _controller.Tc - _initialTc;
             existingTest.TotalTestTime = _controller.ElapsedSeconds;
 
             // 记录当前温度作为最终值

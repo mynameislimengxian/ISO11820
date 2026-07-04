@@ -68,7 +68,20 @@ public class TestController
     private double _driftTf1;                           // TF1 温漂（°C/10min）
     private double _driftTf2;                           // TF2 温漂（°C/10min）
 
-    // ========== 终止条件 ==========
+    // ========== 记录初始温度 ==========
+    private double _initialTf1;
+    private double _initialTf2;
+    private double _initialTs;
+    private double _initialTc;
+
+    /// <summary>记录开始时的炉温1</summary>
+    public double InitialTf1 => _initialTf1;
+    /// <summary>记录开始时的炉温2</summary>
+    public double InitialTf2 => _initialTf2;
+    /// <summary>记录开始时的表面温度</summary>
+    public double InitialTs => _initialTs;
+    /// <summary>记录开始时的中心温度</summary>
+    public double InitialTc => _initialTc;
 
     private TestMode _testMode = TestMode.Standard60Min;  // 试验模式
     private int _targetDurationSeconds = 3600;             // 目标时长（秒），仅 FixedDuration 模式使用
@@ -160,6 +173,11 @@ public class TestController
             State = TestState.Recording;
             ElapsedSeconds = 0;
             _recordingTickCount = 0;
+            // 记录初始温度（用于计算温升）
+            _initialTf1 = Tf1;
+            _initialTf2 = Tf2;
+            _initialTs = Ts;
+            _initialTc = Tc;
             AddMessage("开始记录，计时开始");
             return true;
         }

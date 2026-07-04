@@ -457,21 +457,14 @@ public partial class MainForm : Form
             string productId = Controller.CurrentProductId;
             string testId = Controller.CurrentTestId;
             double preWeight = Controller.CurrentPreWeight;
-            double initialTemp = Controller.Ts; // 样品初始温度（记录开始时的温度）
+            double initialTf1 = Controller.InitialTf1;
+            double initialTf2 = Controller.InitialTf2;
+            double initialTs = Controller.InitialTs;
+            double initialTc = Controller.InitialTc;
 
-            // 如果 preWeight 为 0（兼容旧数据），尝试从数据库读取
             var db = _dbHelper ?? new DbHelper(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppGlobal.Instance.DbPath));
-            if (preWeight <= 0 && !string.IsNullOrEmpty(productId) && !string.IsNullOrEmpty(testId))
-            {
-                var existingTest = db.GetTest(productId, testId);
-                if (existingTest != null)
-                {
-                    preWeight = existingTest.PreWeight;
-                    Controller.CurrentPreWeight = preWeight;
-                }
-            }
 
-            using var form = new PhenomenonForm(Controller, db, productId, testId, preWeight, initialTemp);
+            using var form = new PhenomenonForm(Controller, db, productId, testId, preWeight, initialTf1, initialTf2, initialTs, initialTc);
             if (form.ShowDialog() == DialogResult.OK)
             {
                 UpdateButtonStates(Controller.State);
