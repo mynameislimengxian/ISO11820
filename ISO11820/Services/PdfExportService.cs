@@ -3,6 +3,7 @@ using ISO11820.Data;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
 using MigraDoc.Rendering;
+using PdfSharp.Fonts;
 using MdColor = MigraDoc.DocumentObjectModel.Color;
 using MdFont = MigraDoc.DocumentObjectModel.Font;
 
@@ -15,10 +16,16 @@ namespace ISO11820.Services;
 public class PdfExportService
 {
     private readonly DbHelper _db;
+    private static bool _fontResolverRegistered;
 
     public PdfExportService(DbHelper db)
     {
         _db = db;
+        if (!_fontResolverRegistered)
+        {
+            GlobalFontSettings.FontResolver = new SystemFontResolver();
+            _fontResolverRegistered = true;
+        }
     }
 
     /// <summary>
@@ -310,11 +317,57 @@ public class PdfExportService
     /// </summary>
     private static string GetChineseFont()
     {
-        foreach (var name in new[] { "Microsoft YaHei", "SimSun", "Arial" })
+        return "Microsoft YaHei";
+    }
+}
+
+/// <summary>
+/// PDFsharp 字体解析器 — 从 Windows 系统字体目录加载字体
+/// </summary>
+public class SystemFontResolver : IFontResolver
+{
+    public string DefaultFontName => "Microsoft YaHei";
+
+    public byte[] GetFont(string faceName)
+    {
+        var fontPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), faceName + ".ttf");
+        if (File.Exists(fontPath))
+            return File.ReadAllBytes(fontPath);
+
+        fontPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), faceName + ".ttc");
+        if (File.Exists(fontPath))
+            return File.ReadAllBytes(fontPath);
+
+        // 回退到 Arial
+        fontPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf");
+        if (File.Exists(fontPath))
+            return File.ReadAllBytes(fontPath);
+
+        throw new FileNotFoundException($"Font not found: {faceName}");
+    }
+
+    public FontResolverInfo? ResolveTypeface(string familyName, bool isBold, bool isItalic)
+    {
+        string name = familyName switch
         {
-            try { new MdFont(name, 10); return name; }
-            catch { /* 字体不可用，尝试下一个 */ }
+            "Microsoft YaHei" => "msyh",
+            "SimSun" => "simsun",
+            "Arial" => "arial",
+            _ => familyName.ToLower()
+        };
+
+        string suffix = "";
+        if (isBold && isItalic) suffix = "bi";
+        else if (isBold) suffix = "b";
+        else if (isItalic) suffix = "i";
+
+        try
+        {
+            return new FontResolverInfo(name + suffix);
         }
-        return "Arial";
+        catch
+        {
+            return new FontResolverInfo("arial");
+        }
     }
 }

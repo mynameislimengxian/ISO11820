@@ -336,6 +336,25 @@ public class PhenomenonForm : Form
             // 温升（使用当前最终温度 - 初始温度）
             // 从控制器获取当前温度
             existingTest.DeltaTf = _controller.Tf1 - _initialTemp;
+            existingTest.DeltaTs = _controller.Ts - _initialTemp;
+            existingTest.DeltaTc = _controller.Tc - _initialTemp;
+            existingTest.TotalTestTime = _controller.ElapsedSeconds;
+
+            // 记录当前温度作为最终值
+            existingTest.FinalTf1 = _controller.Tf1;
+            existingTest.FinalTf2 = _controller.Tf2;
+            existingTest.FinalTs = _controller.Ts;
+            existingTest.FinalTc = _controller.Tc;
+            existingTest.FinalTf1Time = _controller.ElapsedSeconds;
+            existingTest.FinalTf2Time = _controller.ElapsedSeconds;
+            existingTest.FinalTsTime = _controller.ElapsedSeconds;
+            existingTest.FinalTcTime = _controller.ElapsedSeconds;
+
+            // 最大值（如果当前温度更高则更新）
+            existingTest.MaxTf1 = Math.Max(existingTest.MaxTf1, _controller.Tf1);
+            existingTest.MaxTf2 = Math.Max(existingTest.MaxTf2, _controller.Tf2);
+            existingTest.MaxTs = Math.Max(existingTest.MaxTs, _controller.Ts);
+            existingTest.MaxTc = Math.Max(existingTest.MaxTc, _controller.Tc);
 
             dbHelper.UpdateTestResult(existingTest);
 
