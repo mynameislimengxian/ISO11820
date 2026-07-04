@@ -73,6 +73,7 @@ public class TestController
     private TestMode _testMode = TestMode.Standard60Min;  // 试验模式
     private int _targetDurationSeconds = 3600;             // 目标时长（秒），仅 FixedDuration 模式使用
     private int _lastCheckMinute;                          // 上次检查的"分钟"刻度（用于标准模式每5分钟检查）
+    private bool _isCoolingDown;                           // 是否正在降温（停止升温后）
 
     // ========== 事件 ==========
 
@@ -133,16 +134,17 @@ public class TestController
         }
     }
 
-    /// <summary>停止升温：Preparing/Ready → Idle</summary>
+    /// <summary>停止升温：Preparing/Ready/Complete → 降温后回到 Idle</summary>
     public bool StopHeating()
     {
         lock (_lock)
         {
             if (State != TestState.Preparing && State != TestState.Ready && State != TestState.Complete)
                 return false;
-            _timer.Stop();
-            State = TestState.Idle;
-            AddMessage("用户手动停止升温");
+            // 进入降温阶段，不停止定时器，温度逐渐下降
+            State = TestState.Complete;
+            _isCoolingDown = true;
+            AddMessage("停止升温，系统降温中");
             return true;
         }
     }
@@ -213,6 +215,32 @@ public class TestController
     {
         lock (_lock)
         {
+            // 降温阶段：持续降温直到接近室温
+            if (_isCoolingDown && State == TestState.Complete)
+            {
+                UpdateTemperatures();
+                if (Tf1 <= 30.0)
+                {
+                    // 降温完成，回到空闲
+                    Tf1 = 25.0; Tf2 = 24.9; Ts = 24.5; Tc = 24.3; Tcal = 25.0;
+                    _timer.Stop();
+                    _isCoolingDown = false;
+                    State = TestState.Idle;
+                    AddMessage("降温完成，系统已回到室温");
+                }
+                // 广播降温数据
+                var coolArgs = new DataBroadcastEventArgs
+                {
+                    Tf1 = Math.Round(Tf1, 1), Tf2 = Math.Round(Tf2, 1),
+                    Ts = Math.Round(Ts, 1), Tc = Math.Round(Tc, 1),
+                    Tcal = Math.Round(Tcal, 1), ElapsedSeconds = 0,
+                    State = State, Messages = new List<MasterMessage>(_pendingMessages)
+                };
+                _pendingMessages.Clear();
+                DataBroadcast?.Invoke(this, coolArgs);
+                return;
+            }
+
             if (State == TestState.Idle) return;
 
             // 1. 更新温度（仿真）
@@ -484,7 +512,10 @@ public class TestController
         TestState.Preparing => "升温中",
         TestState.Ready => "就绪",
         TestState.Recording => "记录中",
-        TestState.Complete => "完成",
+        TestState.Complete => _isCoolingDown ? "降温中" : "完成",
         _ => "未知"
     };
+
+    /// <summary>是否正在降温</summary>
+    public bool IsCoolingDown => _isCoolingDown;
 }

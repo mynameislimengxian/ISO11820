@@ -393,6 +393,7 @@ public partial class MainForm : Form
                 break;
             case TestState.Complete:
                 btnNewTest.Enabled = true;
+                btnStopHeat.Enabled = true;
                 btnSettings.Enabled = true;
                 break;
         }
