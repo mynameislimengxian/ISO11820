@@ -331,18 +331,20 @@ public class SystemFontResolver : IFontResolver
     public byte[] GetFont(string faceName)
     {
         var fontsDir = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
-        var candidates = new[]
+
+        // 直接尝试常用字体文件
+        var candidates = new List<string>
         {
             Path.Combine(fontsDir, faceName + ".ttf"),
             Path.Combine(fontsDir, faceName + ".ttc"),
-            Path.Combine(fontsDir, faceName + "bd.ttf"),
-            Path.Combine(fontsDir, "msyh.ttf"),
-            Path.Combine(fontsDir, "msyh.ttc"),
-            Path.Combine(fontsDir, "msyhbd.ttf"),
-            Path.Combine(fontsDir, "simsun.ttf"),
-            Path.Combine(fontsDir, "simsun.ttc"),
-            Path.Combine(fontsDir, "arial.ttf"),
         };
+
+        // 针对微软雅黑的各种文件名
+        if (faceName == "simhei")
+        {
+            candidates.Add(Path.Combine(fontsDir, "simhei.ttf"));
+        }
+        candidates.Add(Path.Combine(fontsDir, "arial.ttf"));
 
         foreach (var path in candidates)
         {
@@ -350,29 +352,33 @@ public class SystemFontResolver : IFontResolver
                 return File.ReadAllBytes(path);
         }
 
-        // 最后尝试搜索匹配的文件
+        // 搜索任意可用的 TTF/TTC 字体
         try
         {
-            var files = Directory.GetFiles(fontsDir, "*.ttf").Concat(Directory.GetFiles(fontsDir, "*.ttc"));
+            var files = Directory.GetFiles(fontsDir, "*.ttf")
+                .Concat(Directory.GetFiles(fontsDir, "*.ttc"))
+                .ToList();
+
+            // 优先中文字体
             foreach (var f in files)
             {
                 var name = Path.GetFileNameWithoutExtension(f).ToLower();
-                if (name.Contains("msyh") || name.Contains("microsoft") || name.Contains("yahei"))
+                if (name.Contains("msyh") || name.Contains("simsun") || name.Contains("yahei"))
                     return File.ReadAllBytes(f);
             }
-            // 返回任意可用字体
-            var first = files.FirstOrDefault();
-            if (first != null)
-                return File.ReadAllBytes(first);
+            // 任意字体
+            if (files.Count > 0)
+                return File.ReadAllBytes(files[0]);
         }
         catch { }
 
-        throw new FileNotFoundException($"No font found for: {faceName}");
+        // 最终回退：返回空字节数组（会导致 PDF 中文字无法显示，但不会崩溃）
+        return Array.Empty<byte>();
     }
 
     public FontResolverInfo? ResolveTypeface(string familyName, bool isBold, bool isItalic)
     {
-        // 始终返回 "arial" 作为安全的回退
-        return new FontResolverInfo("arial");
+        // 使用 SimHei（黑体）— 它是 .ttf 格式，PDFsharp 兼容性好
+        return new FontResolverInfo("simhei");
     }
 }
