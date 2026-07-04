@@ -340,31 +340,27 @@ public class PhenomenonForm : Form
             existingTest.FlameDuration = flameDuration;
             existingTest.Memo = txtRemark.Text;
 
-            // 温升（使用当前最终温度 - 初始温度）
-            // 从控制器获取当前温度
-            // 温升 = 最终温度 - 记录开始时的初始温度
-            existingTest.DeltaTf1 = _controller.Tf1 - _initialTf1;
-            existingTest.DeltaTf2 = _controller.Tf2 - _initialTf2;
-            existingTest.DeltaTf = (_controller.Tf1 - _initialTf1 + _controller.Tf2 - _initialTf2) / 2;
-            existingTest.DeltaTs = _controller.Ts - _initialTs;
-            existingTest.DeltaTc = _controller.Tc - _initialTc;
-            existingTest.TotalTestTime = _controller.ElapsedSeconds;
-
-            // 记录当前温度作为最终值
-            existingTest.FinalTf1 = _controller.Tf1;
-            existingTest.FinalTf2 = _controller.Tf2;
-            existingTest.FinalTs = _controller.Ts;
-            existingTest.FinalTc = _controller.Tc;
+            // 使用锁定的最终温度（停止记录时的值，不是降温后的值）
+            existingTest.FinalTf1 = _controller.FinalTf1;
+            existingTest.FinalTf2 = _controller.FinalTf2;
+            existingTest.FinalTs = _controller.FinalTs;
+            existingTest.FinalTc = _controller.FinalTc;
             existingTest.FinalTf1Time = _controller.ElapsedSeconds;
             existingTest.FinalTf2Time = _controller.ElapsedSeconds;
             existingTest.FinalTsTime = _controller.ElapsedSeconds;
             existingTest.FinalTcTime = _controller.ElapsedSeconds;
 
-            // 最大值（如果当前温度更高则更新）
-            existingTest.MaxTf1 = Math.Max(existingTest.MaxTf1, _controller.Tf1);
-            existingTest.MaxTf2 = Math.Max(existingTest.MaxTf2, _controller.Tf2);
-            existingTest.MaxTs = Math.Max(existingTest.MaxTs, _controller.Ts);
-            existingTest.MaxTc = Math.Max(existingTest.MaxTc, _controller.Tc);
+            existingTest.MaxTf1 = Math.Max(existingTest.MaxTf1, _controller.FinalTf1);
+            existingTest.MaxTf2 = Math.Max(existingTest.MaxTf2, _controller.FinalTf2);
+            existingTest.MaxTs = Math.Max(existingTest.MaxTs, _controller.FinalTs);
+            existingTest.MaxTc = Math.Max(existingTest.MaxTc, _controller.FinalTc);
+
+            existingTest.DeltaTf1 = _controller.FinalTf1 - _initialTf1;
+            existingTest.DeltaTf2 = _controller.FinalTf2 - _initialTf2;
+            existingTest.DeltaTf = (_controller.FinalTf1 - _initialTf1 + _controller.FinalTf2 - _initialTf2) / 2;
+            existingTest.DeltaTs = _controller.FinalTs - _initialTs;
+            existingTest.DeltaTc = _controller.FinalTc - _initialTc;
+            existingTest.TotalTestTime = _controller.ElapsedSeconds;
 
             dbHelper.UpdateTestResult(existingTest);
 

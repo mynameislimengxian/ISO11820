@@ -83,6 +83,17 @@ public class TestController
     /// <summary>记录开始时的中心温度</summary>
     public double InitialTc => _initialTc;
 
+    // ========== 记录最终温度（停止记录时锁定） ==========
+    private double _finalTf1, _finalTf2, _finalTs, _finalTc;
+    /// <summary>停止记录时的炉温1</summary>
+    public double FinalTf1 => _finalTf1;
+    /// <summary>停止记录时的炉温2</summary>
+    public double FinalTf2 => _finalTf2;
+    /// <summary>停止记录时的表面温度</summary>
+    public double FinalTs => _finalTs;
+    /// <summary>停止记录时的中心温度</summary>
+    public double FinalTc => _finalTc;
+
     private TestMode _testMode = TestMode.Standard60Min;  // 试验模式
     private int _targetDurationSeconds = 3600;             // 目标时长（秒），仅 FixedDuration 模式使用
     private int _lastCheckMinute;                          // 上次检查的"分钟"刻度（用于标准模式每5分钟检查）
@@ -190,6 +201,11 @@ public class TestController
         {
             if (State != TestState.Recording) return false;
             State = TestState.Complete;
+            // 锁定最终温度（停止记录时的温度，而不是降温后的温度）
+            _finalTf1 = Tf1;
+            _finalTf2 = Tf2;
+            _finalTs = Ts;
+            _finalTc = Tc;
             AddMessage("用户手动停止记录");
             return true;
         }
