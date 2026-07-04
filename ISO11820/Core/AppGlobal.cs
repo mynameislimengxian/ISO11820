@@ -19,21 +19,40 @@ public class AppGlobal
     public void Initialize()
     {
         Configuration = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory())
+            .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
             .Build();
     }
 
     // ========== 配置快捷访问 ==========
 
+    /// <summary>
+    /// 数据库文件相对路径（从配置读取）。
+    /// </summary>
     public string DbPath => Configuration["Database:SqlitePath"]
         ?? "Data\\ISO11820.db";
 
-    public string BaseDirectory => Configuration["FileStorage:BaseDirectory"]
-        ?? "D:\\ISO11820";
+    /// <summary>
+    /// 数据库文件绝对路径。
+    /// </summary>
+    public string DbFullPath => Path.GetFullPath(
+        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DbPath));
 
-    public string ReportsDirectory => Configuration["Report:OutputDirectory"]
-        ?? "D:\\ISO11820\\Reports";
+    private string? _baseDir;
+    private string? _reportsDir;
+
+    /// <summary>
+    /// 从配置读取路径，如果是相对路径则转为相对于程序运行目录的绝对路径。
+    /// </summary>
+    private string ResolvePath(string key, string fallback)
+    {
+        var raw = Configuration[key] ?? fallback;
+        return Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, raw));
+    }
+
+    public string BaseDirectory => _baseDir ??= ResolvePath("FileStorage:BaseDirectory", @"Data\ISO11820_Data");
+
+    public string ReportsDirectory => _reportsDir ??= ResolvePath("Report:OutputDirectory", @"Data\ISO11820_Data\Reports");
 
     public bool EnableSimulation => bool.Parse(
         Configuration["Simulation:EnableSimulation"] ?? "true");

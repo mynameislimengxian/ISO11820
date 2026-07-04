@@ -15,5 +15,8 @@ obj/
 .DS_Store
 
 ## Build
-/ISO11820/Data/ISO11820.db
 publish/
+
+## Runtime data (generated at runtime, relative to output directory)
+**/Data/ISO11820.db
+**/Data/ISO11820_Data/

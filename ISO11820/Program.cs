@@ -21,7 +21,7 @@ static class Program
         FileStorageManager.EnsureDirectories();
 
         // 3. 初始化数据库（首次运行自动建库建表 + 插入初始数据）
-        var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppGlobal.Instance.DbPath);
+        var dbPath = AppGlobal.Instance.DbFullPath;
         var dbDir = Path.GetDirectoryName(dbPath);
         if (!string.IsNullOrEmpty(dbDir) && !Directory.Exists(dbDir))
             Directory.CreateDirectory(dbDir);

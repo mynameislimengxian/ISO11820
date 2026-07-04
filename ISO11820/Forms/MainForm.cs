@@ -403,7 +403,7 @@ public partial class MainForm : Form
 
     private void BtnNewTest_Click(object? sender, EventArgs e)
     {
-        using var form = new NewTestForm(Controller, _dbHelper ?? new DbHelper(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppGlobal.Instance.DbPath)));
+        using var form = new NewTestForm(Controller, _dbHelper ?? new DbHelper(AppGlobal.Instance.DbFullPath));
         if (form.ShowDialog() == DialogResult.OK)
         {
             // 更新产品编号显示
@@ -462,7 +462,7 @@ public partial class MainForm : Form
             double initialTs = Controller.InitialTs;
             double initialTc = Controller.InitialTc;
 
-            var db = _dbHelper ?? new DbHelper(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppGlobal.Instance.DbPath));
+            var db = _dbHelper ?? new DbHelper(AppGlobal.Instance.DbFullPath);
 
             using var form = new PhenomenonForm(Controller, db, productId, testId, preWeight, initialTf1, initialTf2, initialTs, initialTc);
             if (form.ShowDialog() == DialogResult.OK)
@@ -560,7 +560,7 @@ public partial class MainForm : Form
     {
         try
         {
-            var db = _dbHelper ?? new DbHelper(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppGlobal.Instance.DbPath));
+            var db = _dbHelper ?? new DbHelper(AppGlobal.Instance.DbFullPath);
 
             // 1. CSV 导出 — 温度时间序列
             if (_temperatureRecords.Count > 0)

@@ -183,7 +183,7 @@ public class LoginForm : Form
         lblError.Text = string.Empty;
 
         // 优先使用传入的 DbHelper，否则从 AppGlobal 创建
-        DbHelper dbHelper = _dbHelper ?? new DbHelper(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppGlobal.Instance.DbPath));
+        DbHelper dbHelper = _dbHelper ?? new DbHelper(AppGlobal.Instance.DbFullPath);
 
         string username = rbAdmin.Checked ? "admin" : "experimenter";
         string pwd = txtPwd.Text;
