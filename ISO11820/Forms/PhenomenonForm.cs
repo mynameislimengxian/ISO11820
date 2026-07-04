@@ -49,18 +49,19 @@ public class PhenomenonForm : Form
     private void InitializeForm()
     {
         Text = "试验现象记录 — ISO 11820";
-        Size = new Size(500, 480);
+        Size = new Size(600, 550);
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
+        AutoScroll = true;
     }
 
     private void BuildUi()
     {
         int y = 20;
-        int labelWidth = 120;
-        int controlWidth = 220;
+        int labelWidth = 140;
+        int controlWidth = 260;
 
         // ===== 火焰观察 =====
         chkFlame = new CheckBox
@@ -92,7 +93,7 @@ public class PhenomenonForm : Form
         nudFlameTime = new NumericUpDown
         {
             Location = new Point(160, y),
-            Size = new Size(100, 25),
+            Size = new Size(120, 25),
             Minimum = 0,
             Maximum = 7200,
             Value = 0,
@@ -110,7 +111,7 @@ public class PhenomenonForm : Form
         nudFlameDuration = new NumericUpDown
         {
             Location = new Point(160, y),
-            Size = new Size(100, 25),
+            Size = new Size(120, 25),
             Minimum = 0,
             Maximum = 7200,
             Value = 0,
@@ -180,13 +181,13 @@ public class PhenomenonForm : Form
         {
             Text = "样品温升 (°C)：",
             Location = new Point(15, rY),
-            Size = new Size(100, 25)
+            Size = new Size(120, 25)
         };
         lblTempRise = new Label
         {
             Text = "--",
             Location = new Point(120, rY),
-            Size = new Size(100, 25),
+            Size = new Size(120, 25),
             ForeColor = Color.Blue,
             Font = new Font("微软雅黑", 10, FontStyle.Bold)
         };
