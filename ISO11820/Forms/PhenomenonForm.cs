@@ -92,7 +92,7 @@ public class PhenomenonForm : Form
         };
         nudFlameTime = new NumericUpDown
         {
-            Location = new Point(160, y),
+            Location = new Point(180, y),
             Size = new Size(120, 25),
             Minimum = 0,
             Maximum = 7200,
@@ -110,7 +110,7 @@ public class PhenomenonForm : Form
         };
         nudFlameDuration = new NumericUpDown
         {
-            Location = new Point(160, y),
+            Location = new Point(180, y),
             Size = new Size(120, 25),
             Minimum = 0,
             Maximum = 7200,
@@ -129,7 +129,7 @@ public class PhenomenonForm : Form
         };
         txtPostWeight = new TextBox
         {
-            Location = new Point(160, y),
+            Location = new Point(180, y),
             Size = new Size(controlWidth, 25),
             Font = new Font("微软雅黑", 10)
         };
