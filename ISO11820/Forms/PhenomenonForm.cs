@@ -49,7 +49,7 @@ public class PhenomenonForm : Form
     private void InitializeForm()
     {
         Text = "试验现象记录 — ISO 11820";
-        Size = new Size(600, 440);
+        Size = new Size(650, 480);
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;

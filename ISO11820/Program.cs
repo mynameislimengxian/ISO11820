@@ -11,7 +11,7 @@ static class Program
     static void Main(string[] args)
     {
         // 高DPI适配：解决高分屏文字显示不全问题
-        Application.SetHighDpiMode(HighDpiMode.SystemAware);
+        Application.SetHighDpiMode(HighDpiMode.DpiUnaware);
         ApplicationConfiguration.Initialize();
 
         // 1. 初始化全局配置
