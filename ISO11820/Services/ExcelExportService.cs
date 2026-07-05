@@ -229,7 +229,7 @@ public class ExcelExportService
     private static void AddSeries(ExcelChart chart, ExcelWorksheet sheet,
         ExcelRange yRange, ExcelRange xRange, string name)
     {
-        var series = chart.Series.Add(xRange, yRange);
+        var series = chart.Series.Add(yRange, xRange);
         series.Header = name;
     }
 }
